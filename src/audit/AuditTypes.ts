@@ -1,0 +1,40 @@
+export enum AuditEventType {
+  RECONCILIATION_STARTED = "RECONCILIATION_STARTED",
+  RECONCILIATION_COMPLETED = "RECONCILIATION_COMPLETED",
+  RECONCILIATION_FAILED = "RECONCILIATION_FAILED",
+
+  REPORT_GENERATED = "REPORT_GENERATED",
+
+  DISCREPANCY_DETECTED = "DISCREPANCY_DETECTED",
+  DISCREPANCY_IGNORED = "DISCREPANCY_IGNORED",
+  DISCREPANCY_RESOLVED = "DISCREPANCY_RESOLVED",
+
+  PAYMENT_DATA_FETCHED = "PAYMENT_DATA_FETCHED",
+  LEDGER_DATA_FETCHED = "LEDGER_DATA_FETCHED",
+
+  CONNECTOR_ERROR = "CONNECTOR_ERROR",
+  SYSTEM_ERROR = "SYSTEM_ERROR"
+}
+
+export enum AuditSeverity {
+  INFO = "INFO",
+  WARNING = "WARNING",
+  ERROR = "ERROR",
+  CRITICAL = "CRITICAL"
+}
+
+export interface AuditLog {
+  id: string;
+
+  organizationId: string;
+
+  event: AuditEventType;
+
+  severity: AuditSeverity;
+
+  message: string;
+
+  timestamp: Date;
+
+  metadata?: Record<string, any>;
+}
