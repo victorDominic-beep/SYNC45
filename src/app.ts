@@ -5,6 +5,8 @@ import compression from "compression";
 import morgan from "morgan";
 
 import { createReconciliationRoutes } from "./api/routes/reconciliation.routes";
+import { createAuthRoutes } from "./api/routes/auth.routes";
+import { createOrganizationRoutes } from "./api/routes/organization.routes";
 import { GlobalErrorHandler } from "./errors/GlobalErrorHandler";
 import { createAIRoutes } from "./ai/routes/ai.routes";
 import { Application } from "./bootstrap/Application";
@@ -50,27 +52,9 @@ app.get("/health", async (_req, res, next) => {
   }
 });
 
-// Organization credential routes: frontend sends credentials to backend and backend stores them encrypted.
-app.get(
-  "/api/organizations/:id/connections",
-  application.organizationController.getConnections.bind(
-    application.organizationController
-  )
-);
-app.post(
-  "/api/connections",
-  application.organizationController.saveConnections.bind(
-    application.organizationController
-  )
-);
-app.post(
-  "/api/organizations/:id/connections",
-  application.organizationController.saveConnections.bind(
-    application.organizationController
-  )
-);
-
 // API Routes
+app.use("/api/auth", createAuthRoutes(application));
+app.use("/api", createOrganizationRoutes(application));
 app.use("/api/reconciliation", createReconciliationRoutes(application));
 app.use("/api/ai", createAIRoutes(application));
 

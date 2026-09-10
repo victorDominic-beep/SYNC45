@@ -21,6 +21,9 @@ import { AIController } from "../ai/controllers/AIController";
 import { ReconciliationRepository } from "../repositories/ReconciliationRepository";
 import { OrganizationController } from "../organizations/OrganizationController";
 import { OrganizationService } from "../organizations/OrganizationService";
+import { UserController } from "../users/UserController";
+import { UserService } from "../users/UserService";
+import { PostgresRepository } from "../repositories/PostgresRepository";
 
 type LedgerSource = "mongodb" | "postgresql" | "mysql" | "excel";
 
@@ -36,6 +39,9 @@ export class Application {
   public readonly csvUploadRegistry = new Map<string, string>();
   public readonly organizationService: OrganizationService;
   public readonly organizationController: OrganizationController;
+  public readonly userService: UserService;
+  public readonly userController: UserController;
+  public readonly postgresRepository: PostgresRepository;
 
   constructor() {
     // Connectors
@@ -90,8 +96,14 @@ export class Application {
         );
     }
 
+    // Auth + organization identity persistence
+    this.postgresRepository = new PostgresRepository();
+    this.userService = new UserService(this.postgresRepository);
+    this.userController = new UserController(this.userService);
+    this.postgresRepository.init().catch(() => undefined);
+
     // Organization connection persistence service and controller
-    this.organizationService = new OrganizationService();
+    this.organizationService = new OrganizationService(this.postgresRepository);
     this.organizationController = new OrganizationController(
       this.organizationService
     );

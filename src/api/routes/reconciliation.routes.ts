@@ -3,6 +3,8 @@ import multer from "multer";
 import path from "path";
 import { Application } from "../../bootstrap/Application";
 import { ReconciliationValidator } from "../validators/ReconciliationValidator";
+import { requireAuth } from "../middleware/AuthMiddleware";
+import { requireOrganizationScope } from "../middleware/OrganizationScopeMiddleware";
 
 const upload = multer({
   storage: multer.diskStorage({
@@ -29,26 +31,40 @@ export function createReconciliationRoutes(application: Application): Router {
   const router = Router();
   const reconciliationController = application.reconciliationController;
 
-  router.get(
+    router.get(
     "/reports",
-    reconciliationController.list.bind(reconciliationController)
+    requireAuth,
+    (req, res, next) => {
+      void reconciliationController.list(req, res, next);
+    }
   );
 
   router.get(
     "/reports/:id",
-    reconciliationController.getById.bind(reconciliationController)
+    requireAuth,
+    requireOrganizationScope,
+    (req, res, next) => {
+      void reconciliationController.getById(req, res, next);
+    }
   );
 
   router.post(
     "/upload-csv",
+    requireAuth,
     upload.single("file"),
-    reconciliationController.uploadCsv.bind(reconciliationController)
+    (req, res, next) => {
+      void reconciliationController.uploadCsv(req, res, next);
+    }
   );
 
   router.post(
     "/reconcile",
+    requireAuth,
+    requireOrganizationScope,
     ReconciliationValidator.validate,
-    reconciliationController.reconcile.bind(reconciliationController)
+    (req, res, next) => {
+      void reconciliationController.reconcile(req, res, next);
+    }
   );
 
   return router;
