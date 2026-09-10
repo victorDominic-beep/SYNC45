@@ -50,6 +50,26 @@ app.get("/health", async (_req, res, next) => {
   }
 });
 
+// Organization credential routes: frontend sends credentials to backend and backend stores them encrypted.
+app.get(
+  "/api/organizations/:id/connections",
+  application.organizationController.getConnections.bind(
+    application.organizationController
+  )
+);
+app.post(
+  "/api/connections",
+  application.organizationController.saveConnections.bind(
+    application.organizationController
+  )
+);
+app.post(
+  "/api/organizations/:id/connections",
+  application.organizationController.saveConnections.bind(
+    application.organizationController
+  )
+);
+
 // API Routes
 app.use("/api/reconciliation", createReconciliationRoutes(application));
 app.use("/api/ai", createAIRoutes(application));

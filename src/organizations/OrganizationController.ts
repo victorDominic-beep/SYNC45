@@ -101,8 +101,70 @@ export class OrganizationController {
     }
   };
 
+  public saveConnections = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const organizationId =
+        req.params.id || req.body.organizationId || req.body.organization;
+
+      const body = req.body.connections ?? req.body;
+
+      const organization =
+        await this.organizationService.saveConnections(
+          organizationId,
+          body
+        );
+
+      if (!organization) {
+        res.status(404).json({
+          success: false,
+          message: "Organization not found.",
+        });
+        return;
+      }
+
+      res.status(200).json({
+        success: true,
+        data: organization.connections,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  public getConnections = async (
+    req: Request<OrganizationParams>,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const connections =
+        await this.organizationService.getConnections(
+          req.params.id
+        );
+
+      if (!connections) {
+        res.status(200).json({
+          success: true,
+          data: {},
+        });
+        return;
+      }
+
+      res.status(200).json({
+        success: true,
+        data: connections,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
   public activate = async (
-    req: Request<OrganizationParams>    ,
+    req: Request<OrganizationParams>,
     res: Response,
     next: NextFunction
   ): Promise<void> => {

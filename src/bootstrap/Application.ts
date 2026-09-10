@@ -19,6 +19,8 @@ import { GroqProvider } from "../ai/providers/GroqProvider";
 import { AIInsightService } from "../ai/services/AIInsightService";
 import { AIController } from "../ai/controllers/AIController";
 import { ReconciliationRepository } from "../repositories/ReconciliationRepository";
+import { OrganizationController } from "../organizations/OrganizationController";
+import { OrganizationService } from "../organizations/OrganizationService";
 
 type LedgerSource = "mongodb" | "postgresql" | "mysql" | "excel";
 
@@ -27,10 +29,13 @@ export class Application {
   public readonly reconciliationJob: ReconciliationJob;
   public readonly reconciliationService: ReconciliationService;
   public readonly aiController: AIController;
-public readonly aiInsightService: AIInsightService;
+  public readonly aiInsightService: AIInsightService;
   public readonly reconciliationRepository: ReconciliationRepository;
   public readonly paystackConnector: PaystackConnector;
   public readonly ledgerConnector: Connector;
+  public readonly csvUploadRegistry = new Map<string, string>();
+  public readonly organizationService: OrganizationService;
+  public readonly organizationController: OrganizationController;
 
   constructor() {
     // Connectors
@@ -85,6 +90,12 @@ public readonly aiInsightService: AIInsightService;
         );
     }
 
+    // Organization connection persistence service and controller
+    this.organizationService = new OrganizationService();
+    this.organizationController = new OrganizationController(
+      this.organizationService
+    );
+
     // Infrastructure
     this.paystackConnector = paystackConnector;
     this.ledgerConnector = ledgerConnector;
@@ -108,7 +119,9 @@ public readonly aiInsightService: AIInsightService;
       ledgerConnector,
       ledgerSource,
       this.aiInsightService,
-      this.reconciliationRepository
+      this.reconciliationRepository,
+      this.csvUploadRegistry,
+      this.organizationService
     );
 
     this.reconciliationJob = new ReconciliationJob(
@@ -121,7 +134,8 @@ public readonly aiInsightService: AIInsightService;
     this.reconciliationController =
       new ReconciliationController(
         this.reconciliationService,
-        this.reconciliationRepository
+        this.reconciliationRepository,
+        this.csvUploadRegistry
       );
 
     this.aiController = new AIController(

@@ -73,6 +73,20 @@ export class TransactionNormalizer {
       paidAt: new Date(data.paidAt),
     };
   }
+
+  /**
+   * Normalizes a CSV ledger transaction into the canonical Transaction format.
+   */
+  static fromCSV(data: any): Transaction {
+    return {
+      reference: data.reference,
+      amount: Number(data.amount),
+      currency: data.currency,
+      status: this.normalizeStatus(data.status),
+      customer: data.customer ?? "",
+      paidAt: new Date(data.paidAt),
+    };
+  }
   
   /**
    * Converts provider-specific statuses into our standard status.

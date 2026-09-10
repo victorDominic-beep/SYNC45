@@ -1,0 +1,606 @@
+[
+  {
+    "id": "fb021ec1-f7f8-4949-a0e4-d5dc71820972",
+    "organizationId": "test-org",
+    "generatedAt": "2026-09-09T15:23:41.249Z",
+    "statistics": {
+      "totalTransactions": 31,
+      "matched": 0,
+      "missing": 31,
+      "unmatched": 0,
+      "mismatched": 0,
+      "duplicates": 0
+    },
+    "discrepancies": [
+      {
+        "id": "7befae96-ba67-4a6e-8c58-af2b3002ecc7",
+        "reference": "6xh5luokz9",
+        "type": "MISSING_LEDGER_ENTRY",
+        "status": "OPEN",
+        "paymentTransaction": {
+          "reference": "6xh5luokz9",
+          "amount": 85000,
+          "currency": "NGN",
+          "status": "SUCCESS",
+          "customer": "john@snapcrm.tech",
+          "paidAt": "2026-04-20T20:33:26.000Z"
+        },
+        "description": "Transaction exists in payment provider but not in ledger.",
+        "createdAt": "2026-09-09T15:23:41.247Z",
+        "updatedAt": "2026-09-09T15:23:41.247Z",
+        "severity": "HIGH",
+        "priority": "HIGH"
+      },
+      {
+        "id": "fd6cea16-c90f-47fa-b615-1149384f792f",
+        "reference": "pyu35vukdj",
+        "type": "MISSING_LEDGER_ENTRY",
+        "status": "OPEN",
+        "paymentTransaction": {
+          "reference": "pyu35vukdj",
+          "amount": 85000,
+          "currency": "NGN",
+          "status": "SUCCESS",
+          "customer": "godwinv862@gmail.com",
+          "paidAt": "2026-04-20T19:46:54.000Z"
+        },
+        "description": "Transaction exists in payment provider but not in ledger.",
+        "createdAt": "2026-09-09T15:23:41.247Z",
+        "updatedAt": "2026-09-09T15:23:41.247Z",
+        "severity": "HIGH",
+        "priority": "HIGH"
+      },
+      {
+        "id": "f0ce9d52-d899-45c2-b604-9cc29516bccc",
+        "reference": "7zmed0jmer",
+        "type": "MISSING_LEDGER_ENTRY",
+        "status": "OPEN",
+        "paymentTransaction": {
+          "reference": "7zmed0jmer",
+          "amount": 85000,
+          "currency": "NGN",
+          "status": "ABANDONED",
+          "customer": "victorasiwaju16@gmail.com",
+          "paidAt": "1970-01-01T00:00:00.000Z"
+        },
+        "description": "Transaction exists in payment provider but not in ledger.",
+        "createdAt": "2026-09-09T15:23:41.247Z",
+        "updatedAt": "2026-09-09T15:23:41.247Z",
+        "severity": "HIGH",
+        "priority": "HIGH"
+      },
+      {
+        "id": "193e2b85-7ec0-4c52-9a96-597546d5dcd7",
+        "reference": "nd8fplz217",
+        "type": "MISSING_LEDGER_ENTRY",
+        "status": "OPEN",
+        "paymentTransaction": {
+          "reference": "nd8fplz217",
+          "amount": 85000,
+          "currency": "NGN",
+          "status": "ABANDONED",
+          "customer": "victorasiwaju16@gmail.com",
+          "paidAt": "1970-01-01T00:00:00.000Z"
+        },
+        "description": "Transaction exists in payment provider but not in ledger.",
+        "createdAt": "2026-09-09T15:23:41.247Z",
+        "updatedAt": "2026-09-09T15:23:41.247Z",
+        "severity": "HIGH",
+        "priority": "HIGH"
+      },
+      {
+        "id": "701a1222-1a0c-4cff-9298-8e2100bc4d8a",
+        "reference": "vgtes9c73f",
+        "type": "MISSING_LEDGER_ENTRY",
+        "status": "OPEN",
+        "paymentTransaction": {
+          "reference": "vgtes9c73f",
+          "amount": 50000,
+          "currency": "NGN",
+          "status": "ABANDONED",
+          "customer": "victorasiwaju16@gmail.com",
+          "paidAt": "1970-01-01T00:00:00.000Z"
+        },
+        "description": "Transaction exists in payment provider but not in ledger.",
+        "createdAt": "2026-09-09T15:23:41.247Z",
+        "updatedAt": "2026-09-09T15:23:41.247Z",
+        "severity": "HIGH",
+        "priority": "HIGH"
+      },
+      {
+        "id": "dedd2bb7-64d5-4cbf-a01d-e91ac06d23fb",
+        "reference": "h0afykskfr",
+        "type": "MISSING_LEDGER_ENTRY",
+        "status": "OPEN",
+        "paymentTransaction": {
+          "reference": "h0afykskfr",
+          "amount": 50000,
+          "currency": "NGN",
+          "status": "ABANDONED",
+          "customer": "victorasiwaju16@gmail.com",
+          "paidAt": "1970-01-01T00:00:00.000Z"
+        },
+        "description": "Transaction exists in payment provider but not in ledger.",
+        "createdAt": "2026-09-09T15:23:41.247Z",
+        "updatedAt": "2026-09-09T15:23:41.247Z",
+        "severity": "HIGH",
+        "priority": "HIGH"
+      },
+      {
+        "id": "d9386494-8358-4498-aadf-371adb0c916e",
+        "reference": "y1slp8s3ei",
+        "type": "MISSING_LEDGER_ENTRY",
+        "status": "OPEN",
+        "paymentTransaction": {
+          "reference": "y1slp8s3ei",
+          "amount": 50000,
+          "currency": "NGN",
+          "status": "ABANDONED",
+          "customer": "victorasiwaju16@gmail.com",
+          "paidAt": "1970-01-01T00:00:00.000Z"
+        },
+        "description": "Transaction exists in payment provider but not in ledger.",
+        "createdAt": "2026-09-09T15:23:41.247Z",
+        "updatedAt": "2026-09-09T15:23:41.247Z",
+        "severity": "HIGH",
+        "priority": "HIGH"
+      },
+      {
+        "id": "a6d4d987-5688-4d0f-a0c8-92a6c26790bd",
+        "reference": "y4ekzolg7x",
+        "type": "MISSING_LEDGER_ENTRY",
+        "status": "OPEN",
+        "paymentTransaction": {
+          "reference": "y4ekzolg7x",
+          "amount": 50000,
+          "currency": "NGN",
+          "status": "ABANDONED",
+          "customer": "victorasiwaju16@gmail.com",
+          "paidAt": "1970-01-01T00:00:00.000Z"
+        },
+        "description": "Transaction exists in payment provider but not in ledger.",
+        "createdAt": "2026-09-09T15:23:41.247Z",
+        "updatedAt": "2026-09-09T15:23:41.247Z",
+        "severity": "HIGH",
+        "priority": "HIGH"
+      },
+      {
+        "id": "7866550e-9b3c-490e-a584-865c14a9e70f",
+        "reference": "T469289613775646",
+        "type": "MISSING_LEDGER_ENTRY",
+        "status": "OPEN",
+        "paymentTransaction": {
+          "reference": "T469289613775646",
+          "amount": 18000,
+          "currency": "NGN",
+          "status": "SUCCESS",
+          "customer": "victorasiwaju16@gmail.com",
+          "paidAt": "2026-04-10T11:50:27.000Z"
+        },
+        "description": "Transaction exists in payment provider but not in ledger.",
+        "createdAt": "2026-09-09T15:23:41.247Z",
+        "updatedAt": "2026-09-09T15:23:41.247Z",
+        "severity": "HIGH",
+        "priority": "HIGH"
+      },
+      {
+        "id": "f0796bff-b930-46d0-810c-f4116bf48230",
+        "reference": "T446197776979335",
+        "type": "MISSING_LEDGER_ENTRY",
+        "status": "OPEN",
+        "paymentTransaction": {
+          "reference": "T446197776979335",
+          "amount": 18000,
+          "currency": "NGN",
+          "status": "FAILED",
+          "customer": "victorasiwaju16@gmail.com",
+          "paidAt": "1970-01-01T00:00:00.000Z"
+        },
+        "description": "Transaction exists in payment provider but not in ledger.",
+        "createdAt": "2026-09-09T15:23:41.248Z",
+        "updatedAt": "2026-09-09T15:23:41.248Z",
+        "severity": "HIGH",
+        "priority": "HIGH"
+      },
+      {
+        "id": "8feeb057-1411-4ed8-a97c-d58958b11216",
+        "reference": "4kte6oif21",
+        "type": "MISSING_LEDGER_ENTRY",
+        "status": "OPEN",
+        "paymentTransaction": {
+          "reference": "4kte6oif21",
+          "amount": 18000,
+          "currency": "NGN",
+          "status": "ABANDONED",
+          "customer": "victorasiwaju16@gmail.com",
+          "paidAt": "1970-01-01T00:00:00.000Z"
+        },
+        "description": "Transaction exists in payment provider but not in ledger.",
+        "createdAt": "2026-09-09T15:23:41.248Z",
+        "updatedAt": "2026-09-09T15:23:41.248Z",
+        "severity": "HIGH",
+        "priority": "HIGH"
+      },
+      {
+        "id": "9c08bc6c-5920-40c1-b9a8-61fc5509a732",
+        "reference": "T681890261940023",
+        "type": "MISSING_LEDGER_ENTRY",
+        "status": "OPEN",
+        "paymentTransaction": {
+          "reference": "T681890261940023",
+          "amount": 8000,
+          "currency": "NGN",
+          "status": "SUCCESS",
+          "customer": "victorasiwaju16@gmail.com",
+          "paidAt": "2026-04-10T09:48:56.000Z"
+        },
+        "description": "Transaction exists in payment provider but not in ledger.",
+        "createdAt": "2026-09-09T15:23:41.248Z",
+        "updatedAt": "2026-09-09T15:23:41.248Z",
+        "severity": "HIGH",
+        "priority": "HIGH"
+      },
+      {
+        "id": "619859c9-01ba-4251-8b1b-02bb8ea5b533",
+        "reference": "im6k1ltknb",
+        "type": "MISSING_LEDGER_ENTRY",
+        "status": "OPEN",
+        "paymentTransaction": {
+          "reference": "im6k1ltknb",
+          "amount": 8000,
+          "currency": "NGN",
+          "status": "ABANDONED",
+          "customer": "godwinv862@gmail.com",
+          "paidAt": "1970-01-01T00:00:00.000Z"
+        },
+        "description": "Transaction exists in payment provider but not in ledger.",
+        "createdAt": "2026-09-09T15:23:41.248Z",
+        "updatedAt": "2026-09-09T15:23:41.248Z",
+        "severity": "HIGH",
+        "priority": "HIGH"
+      },
+      {
+        "id": "3464cb89-5089-4fb9-a7b6-d82684d61f09",
+        "reference": "qmfbqt65tu",
+        "type": "MISSING_LEDGER_ENTRY",
+        "status": "OPEN",
+        "paymentTransaction": {
+          "reference": "qmfbqt65tu",
+          "amount": 18000,
+          "currency": "NGN",
+          "status": "SUCCESS",
+          "customer": "godwinv862@gmail.com",
+          "paidAt": "2026-04-10T01:31:33.000Z"
+        },
+        "description": "Transaction exists in payment provider but not in ledger.",
+        "createdAt": "2026-09-09T15:23:41.248Z",
+        "updatedAt": "2026-09-09T15:23:41.248Z",
+        "severity": "HIGH",
+        "priority": "HIGH"
+      },
+      {
+        "id": "7ab95caf-f439-40ea-84be-0ed828e35e52",
+        "reference": "nc2dgdw5mz",
+        "type": "MISSING_LEDGER_ENTRY",
+        "status": "OPEN",
+        "paymentTransaction": {
+          "reference": "nc2dgdw5mz",
+          "amount": 20000,
+          "currency": "NGN",
+          "status": "SUCCESS",
+          "customer": "vic@example.com",
+          "paidAt": "2026-04-10T01:02:01.000Z"
+        },
+        "description": "Transaction exists in payment provider but not in ledger.",
+        "createdAt": "2026-09-09T15:23:41.248Z",
+        "updatedAt": "2026-09-09T15:23:41.248Z",
+        "severity": "HIGH",
+        "priority": "HIGH"
+      },
+      {
+        "id": "c72f4388-e47d-44ce-88a3-6cc4ebc60d84",
+        "reference": "y8q8g32v93",
+        "type": "MISSING_LEDGER_ENTRY",
+        "status": "OPEN",
+        "paymentTransaction": {
+          "reference": "y8q8g32v93",
+          "amount": 8000,
+          "currency": "NGN",
+          "status": "ABANDONED",
+          "customer": "godwinv862@gmail.com",
+          "paidAt": "1970-01-01T00:00:00.000Z"
+        },
+        "description": "Transaction exists in payment provider but not in ledger.",
+        "createdAt": "2026-09-09T15:23:41.248Z",
+        "updatedAt": "2026-09-09T15:23:41.248Z",
+        "severity": "HIGH",
+        "priority": "HIGH"
+      },
+      {
+        "id": "0f18bdc6-ecc4-4e43-98b2-e94d8d11524a",
+        "reference": "hshltvvuro",
+        "type": "MISSING_LEDGER_ENTRY",
+        "status": "OPEN",
+        "paymentTransaction": {
+          "reference": "hshltvvuro",
+          "amount": 8000,
+          "currency": "NGN",
+          "status": "SUCCESS",
+          "customer": "godwinv862@gmail.com",
+          "paidAt": "2026-04-10T00:53:40.000Z"
+        },
+        "description": "Transaction exists in payment provider but not in ledger.",
+        "createdAt": "2026-09-09T15:23:41.248Z",
+        "updatedAt": "2026-09-09T15:23:41.248Z",
+        "severity": "HIGH",
+        "priority": "HIGH"
+      },
+      {
+        "id": "a4be8842-d78c-4e76-a2f0-b01df9e38c20",
+        "reference": "i3occd15ve",
+        "type": "MISSING_LEDGER_ENTRY",
+        "status": "OPEN",
+        "paymentTransaction": {
+          "reference": "i3occd15ve",
+          "amount": 8000,
+          "currency": "NGN",
+          "status": "ABANDONED",
+          "customer": "ayaba@example.com",
+          "paidAt": "1970-01-01T00:00:00.000Z"
+        },
+        "description": "Transaction exists in payment provider but not in ledger.",
+        "createdAt": "2026-09-09T15:23:41.248Z",
+        "updatedAt": "2026-09-09T15:23:41.248Z",
+        "severity": "HIGH",
+        "priority": "HIGH"
+      },
+      {
+        "id": "e8fe372b-86b6-4d9d-bf22-9bb8668b59b8",
+        "reference": "grnaoqaddd",
+        "type": "MISSING_LEDGER_ENTRY",
+        "status": "OPEN",
+        "paymentTransaction": {
+          "reference": "grnaoqaddd",
+          "amount": 8000,
+          "currency": "NGN",
+          "status": "SUCCESS",
+          "customer": "victorasiwaju16@gmail.com",
+          "paidAt": "2026-04-09T23:57:59.000Z"
+        },
+        "description": "Transaction exists in payment provider but not in ledger.",
+        "createdAt": "2026-09-09T15:23:41.248Z",
+        "updatedAt": "2026-09-09T15:23:41.248Z",
+        "severity": "HIGH",
+        "priority": "HIGH"
+      },
+      {
+        "id": "6d434361-0cf1-485b-9afb-dfeffe1f1895",
+        "reference": "avk5lmftk6",
+        "type": "MISSING_LEDGER_ENTRY",
+        "status": "OPEN",
+        "paymentTransaction": {
+          "reference": "avk5lmftk6",
+          "amount": 20000,
+          "currency": "NGN",
+          "status": "SUCCESS",
+          "customer": "kentjohn165@gmail.com",
+          "paidAt": "2026-04-09T21:11:23.000Z"
+        },
+        "description": "Transaction exists in payment provider but not in ledger.",
+        "createdAt": "2026-09-09T15:23:41.248Z",
+        "updatedAt": "2026-09-09T15:23:41.248Z",
+        "severity": "HIGH",
+        "priority": "HIGH"
+      },
+      {
+        "id": "515eddfc-5b1f-4621-a809-506cac1c5a0f",
+        "reference": "9e25dsun8u",
+        "type": "MISSING_LEDGER_ENTRY",
+        "status": "OPEN",
+        "paymentTransaction": {
+          "reference": "9e25dsun8u",
+          "amount": 7000,
+          "currency": "NGN",
+          "status": "SUCCESS",
+          "customer": "victorasiwaju16@gmail.com",
+          "paidAt": "2026-04-09T19:45:40.000Z"
+        },
+        "description": "Transaction exists in payment provider but not in ledger.",
+        "createdAt": "2026-09-09T15:23:41.248Z",
+        "updatedAt": "2026-09-09T15:23:41.248Z",
+        "severity": "HIGH",
+        "priority": "HIGH"
+      },
+      {
+        "id": "2ab03db8-9dec-445d-8ca1-439e27e983fe",
+        "reference": "s7ntliuqgy",
+        "type": "MISSING_LEDGER_ENTRY",
+        "status": "OPEN",
+        "paymentTransaction": {
+          "reference": "s7ntliuqgy",
+          "amount": 150,
+          "currency": "NGN",
+          "status": "ABANDONED",
+          "customer": "victorasihwaju16@gmail.com",
+          "paidAt": "1970-01-01T00:00:00.000Z"
+        },
+        "description": "Transaction exists in payment provider but not in ledger.",
+        "createdAt": "2026-09-09T15:23:41.248Z",
+        "updatedAt": "2026-09-09T15:23:41.248Z",
+        "severity": "HIGH",
+        "priority": "HIGH"
+      },
+      {
+        "id": "6346a12e-36a2-4bb0-bfb4-bcd413748d5f",
+        "reference": "ipt8aowuhx",
+        "type": "MISSING_LEDGER_ENTRY",
+        "status": "OPEN",
+        "paymentTransaction": {
+          "reference": "ipt8aowuhx",
+          "amount": 1500,
+          "currency": "NGN",
+          "status": "FAILED",
+          "customer": "godwinv862@gmail.com",
+          "paidAt": "1970-01-01T00:00:00.000Z"
+        },
+        "description": "Transaction exists in payment provider but not in ledger.",
+        "createdAt": "2026-09-09T15:23:41.248Z",
+        "updatedAt": "2026-09-09T15:23:41.248Z",
+        "severity": "HIGH",
+        "priority": "HIGH"
+      },
+      {
+        "id": "bbcbc141-58a7-4aaa-8b89-e042131cb20e",
+        "reference": "q3vskzytbb",
+        "type": "MISSING_LEDGER_ENTRY",
+        "status": "OPEN",
+        "paymentTransaction": {
+          "reference": "q3vskzytbb",
+          "amount": 70,
+          "currency": "NGN",
+          "status": "SUCCESS",
+          "customer": "godwinv862@gmail.com",
+          "paidAt": "2026-04-09T09:05:05.000Z"
+        },
+        "description": "Transaction exists in payment provider but not in ledger.",
+        "createdAt": "2026-09-09T15:23:41.248Z",
+        "updatedAt": "2026-09-09T15:23:41.248Z",
+        "severity": "HIGH",
+        "priority": "HIGH"
+      },
+      {
+        "id": "c90bf70d-f044-4e96-91d2-52315ae82b51",
+        "reference": "8huo0on3x2",
+        "type": "MISSING_LEDGER_ENTRY",
+        "status": "OPEN",
+        "paymentTransaction": {
+          "reference": "8huo0on3x2",
+          "amount": 70,
+          "currency": "NGN",
+          "status": "ABANDONED",
+          "customer": "promise@email.com",
+          "paidAt": "1970-01-01T00:00:00.000Z"
+        },
+        "description": "Transaction exists in payment provider but not in ledger.",
+        "createdAt": "2026-09-09T15:23:41.248Z",
+        "updatedAt": "2026-09-09T15:23:41.248Z",
+        "severity": "HIGH",
+        "priority": "HIGH"
+      },
+      {
+        "id": "7fbfa563-c043-46bb-9f56-e152ef11f3bc",
+        "reference": "afi6c8uqft",
+        "type": "MISSING_LEDGER_ENTRY",
+        "status": "OPEN",
+        "paymentTransaction": {
+          "reference": "afi6c8uqft",
+          "amount": 20000,
+          "currency": "NGN",
+          "status": "SUCCESS",
+          "customer": "victorasiwaju16@gmail.com",
+          "paidAt": "2026-04-08T20:07:41.000Z"
+        },
+        "description": "Transaction exists in payment provider but not in ledger.",
+        "createdAt": "2026-09-09T15:23:41.248Z",
+        "updatedAt": "2026-09-09T15:23:41.248Z",
+        "severity": "HIGH",
+        "priority": "HIGH"
+      },
+      {
+        "id": "68830ea5-82e5-4bfc-8645-fd6a1942074e",
+        "reference": "grfx46ro18",
+        "type": "MISSING_LEDGER_ENTRY",
+        "status": "OPEN",
+        "paymentTransaction": {
+          "reference": "grfx46ro18",
+          "amount": 20000,
+          "currency": "NGN",
+          "status": "SUCCESS",
+          "customer": "victorasiwaju16@gmail.com",
+          "paidAt": "2026-04-08T20:06:33.000Z"
+        },
+        "description": "Transaction exists in payment provider but not in ledger.",
+        "createdAt": "2026-09-09T15:23:41.248Z",
+        "updatedAt": "2026-09-09T15:23:41.248Z",
+        "severity": "HIGH",
+        "priority": "HIGH"
+      },
+      {
+        "id": "4e65b1ff-02e5-4c4f-859a-a78ae85977d9",
+        "reference": "q1ocm2pz1i",
+        "type": "MISSING_LEDGER_ENTRY",
+        "status": "OPEN",
+        "paymentTransaction": {
+          "reference": "q1ocm2pz1i",
+          "amount": 20000,
+          "currency": "NGN",
+          "status": "SUCCESS",
+          "customer": "victorasiwaju16@gmail.com",
+          "paidAt": "2026-04-08T19:24:18.000Z"
+        },
+        "description": "Transaction exists in payment provider but not in ledger.",
+        "createdAt": "2026-09-09T15:23:41.248Z",
+        "updatedAt": "2026-09-09T15:23:41.248Z",
+        "severity": "HIGH",
+        "priority": "HIGH"
+      },
+      {
+        "id": "4bca0c8d-906c-4f60-8088-065d620c7e6a",
+        "reference": "u6siws3vii",
+        "type": "MISSING_LEDGER_ENTRY",
+        "status": "OPEN",
+        "paymentTransaction": {
+          "reference": "u6siws3vii",
+          "amount": 20000,
+          "currency": "NGN",
+          "status": "ABANDONED",
+          "customer": "godwinv862@gmail.com",
+          "paidAt": "1970-01-01T00:00:00.000Z"
+        },
+        "description": "Transaction exists in payment provider but not in ledger.",
+        "createdAt": "2026-09-09T15:23:41.248Z",
+        "updatedAt": "2026-09-09T15:23:41.248Z",
+        "severity": "HIGH",
+        "priority": "HIGH"
+      },
+      {
+        "id": "d2b3f56d-c1ef-4bbf-a0d1-adf245e5b010",
+        "reference": "29295_1773576439",
+        "type": "MISSING_LEDGER_ENTRY",
+        "status": "OPEN",
+        "paymentTransaction": {
+          "reference": "29295_1773576439",
+          "amount": 1247,
+          "currency": "NGN",
+          "status": "ABANDONED",
+          "customer": "victorasiwaju16@gmail.com",
+          "paidAt": "1970-01-01T00:00:00.000Z"
+        },
+        "description": "Transaction exists in payment provider but not in ledger.",
+        "createdAt": "2026-09-09T15:23:41.248Z",
+        "updatedAt": "2026-09-09T15:23:41.248Z",
+        "severity": "HIGH",
+        "priority": "HIGH"
+      },
+      {
+        "id": "c91e90ba-b50a-4d48-b7d0-d8da8731edbe",
+        "reference": "29210_1773484812",
+        "type": "MISSING_LEDGER_ENTRY",
+        "status": "OPEN",
+        "paymentTransaction": {
+          "reference": "29210_1773484812",
+          "amount": 299,
+          "currency": "NGN",
+          "status": "SUCCESS",
+          "customer": "victorasiwaju16@gmail.com",
+          "paidAt": "2026-03-14T10:41:22.000Z"
+        },
+        "description": "Transaction exists in payment provider but not in ledger.",
+        "createdAt": "2026-09-09T15:23:41.248Z",
+        "updatedAt": "2026-09-09T15:23:41.248Z",
+        "severity": "HIGH",
+        "priority": "HIGH"
+      }
+    ]
+  }
+]

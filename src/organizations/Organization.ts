@@ -1,3 +1,41 @@
+export interface OrganizationConnectionSettings {
+  paystack?: {
+    secretKey?: string;
+    encryptedSecretKey?: string;
+    connected?: boolean;
+  };
+
+  mongodb?: {
+    uri?: string;
+    database?: string;
+    collection?: string;
+    encryptedUri?: string;
+    connected?: boolean;
+  };
+
+  postgresql?: {
+    host?: string;
+    port?: number;
+    database?: string;
+    user?: string;
+    password?: string;
+    encryptedPassword?: string;
+    table?: string;
+    connected?: boolean;
+  };
+
+  mysql?: {
+    host?: string;
+    port?: number;
+    database?: string;
+    user?: string;
+    password?: string;
+    encryptedPassword?: string;
+    table?: string;
+    connected?: boolean;
+  };
+}
+
 export interface Organization {
   id: string;
 
@@ -20,6 +58,8 @@ export interface Organization {
   ledgerProvider: string;
 
   settings: OrganizationSettings;
+
+  connections?: OrganizationConnectionSettings;
 }
 
 export interface OrganizationSettings {

@@ -35,12 +35,50 @@ Returns all persisted reconciliation reports. Filter by organization with
 
 Returns one persisted report by its report ID. A missing ID returns JSON `404`.
 
+### `POST /api/reconciliation/upload-csv`
+
+Adds a request-scoped CSV ledger file. The endpoint accepts a multipart form
+field named `file`, validates that the uploaded file is a CSV, validates the
+required columns (`reference`, `amount`, `currency`, `status`, `customer`,
+`paidAt`), and returns a safe JSON response containing a `fileId`.
+
 ### `POST /api/ai/insights`
 
 Generates AI insights for a report supplied in the request body as
 `{ "report": { ... } }`. The response always has `summary`, `risks`,
 `recommendations`, `confidence`, and `generatedAt`. If Groq is unavailable,
 Sync45 returns a predictable fallback insight instead of failing the request.
+
+### CSV reconciliation workflow
+
+1. Upload a CSV by sending a multipart form with the file field named `file` to
+   `POST /api/reconciliation/upload-csv`.
+2. Receive a `fileId` in the response.
+3. Point the same reconciliation request at `ledgerSource: "csv"` and send
+   `csvFileId` in the request body.
+4. The service uses the CSV file as the ledger source and continues through the
+   standard Paystack -> CSV ledger -> normalization -> matching ->
+   classification -> AI -> persistence pipeline.
+
+Example CSV:
+
+```csv
+reference,amount,currency,status,customer,paidAt
+SYNC45-TEST-001,5000,NGN,success,test1@example.com,2026-09-01
+SYNC45-TEST-002,3000,NGN,success,test2@example.com,2026-09-01
+```
+
+Example reconciliation body:
+
+```json
+{
+  "organizationId": "org-001",
+  "from": "2026-09-01",
+  "to": "2026-09-30",
+  "ledgerSource": "csv",
+  "csvFileId": "<fileId from upload-csv>"
+}
+```
 
 ## Local testing
 
