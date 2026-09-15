@@ -97,7 +97,7 @@ export class CSVConnector implements Connector {
 
     const headerMap = CSVConnector.getCanonicalHeaders(rows[0] as Record<string, any>);
     const requiredColumns = CSVConnector.canonicalColumns.filter(
-      (column) => column !== "currency"
+      (column) => column !== "currency" && column !== "customer"
     );
     const missing = requiredColumns.filter(
       (column) => !headerMap[column]
@@ -113,13 +113,11 @@ export class CSVConnector implements Connector {
       const reference = CSVConnector.getMappedValue(row, "reference");
       const amount = CSVConnector.getMappedValue(row, "amount");
       const status = CSVConnector.getMappedValue(row, "status");
-      const customer = CSVConnector.getMappedValue(row, "customer");
       const paidAt = CSVConnector.getMappedValue(row, "paidAt");
 
       if (
         !reference ||
         !status ||
-        !customer ||
         !paidAt ||
         amount === undefined ||
         amount === null ||

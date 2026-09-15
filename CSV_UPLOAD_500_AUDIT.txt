@@ -1,0 +1,257 @@
+SYNC45 CSV UPLOAD HTTP 500 AUDIT
+================================
+
+AUDIT RESULT
+============
+
+npm run build passes successfully.
+
+The upload route and registry wiring are correct in the current source:
+
+POST /api/reconciliation/upload-csv
+  -> requireAuth()
+  -> multer upload.single("file")
+  -> ReconciliationController.uploadCsv()
+  -> CSVConnector.validateFile()
+  -> organization-aware registry
+
+The controller receives:
+
+Map<string, UploadedLedgerFile>
+
+from src/bootstrap/Application.ts, so the registry type is compatible with the updated organization-scoped upload implementation.
+
+
+1. EXACT EXCEPTION CAUSING THE RENDER 500
+=========================================
+
+The exact Render exception cannot be determined from the repository alone because Render logs are not available in this workspace.
+
+The backend currently converts several upload/validation exceptions into HTTP 500.
+
+The most important behavior is in src/errors/GlobalErrorHandler.ts:
+
+res.status(500).json({
+  success: false,
+  message: "An unexpected error occurred."
+});
+
+Before returning that response, it logs the underlying error message and stack through AuditService and AuditLogger.
+
+Therefore, the exact exception must be visible in the Render logs immediately before the HTTP 500 response.
+
+
+2. EXISTING FILE RESPONSIBLE
+============================
+
+UPLOAD ROUTE
+
+src/api/routes/reconciliation.routes.ts
+
+The route correctly expects the multipart field:
+
+file
+
+MULTER CONFIGURATION
+
+Potential errors before the controller runs:
+
+- ./data does not exist or is not writable.
+- Multipart field is not named file.
+- File exceeds 5 MB.
+- File extension is not .csv, .xlsx, or .xls.
+
+These errors bypass uploadCsv() and are handled as generic errors, resulting in HTTP 500.
+
+CONTROLLER VALIDATION
+
+src/api/controllers/ReconciliationController.ts
+
+The controller immediately validates the uploaded file:
+
+await CSVConnector.validateFile(uploadedPath);
+
+For CSV files, possible exceptions are:
+
+- Uploaded ledger file must be a CSV file.
+- Uploaded CSV file is unreadable or missing.
+- Uploaded CSV file contains no rows.
+- Uploaded CSV file is missing required columns: ...
+- Uploaded CSV file contains a malformed row or unsupported value.
+
+Those exceptions are caught and passed to next(error), then converted by the global handler into HTTP 500.
+
+
+3. CSV VALIDATION PATH
+======================
+
+The updated CSV mappings are present in:
+
+src/connectors/ledger/excel/ExcelConnector.ts
+
+Mappings:
+
+- transactionReference maps to reference
+- senderName maps to customer
+- transactionDate maps to paidAt
+- amount maps to amount
+- status maps to status
+- currency is optional
+- missing currency defaults to NGN
+- user is ignored
+
+The validation path also uses these mappings.
+
+The required columns are calculated as all canonical columns except currency.
+
+A CSV with this header should pass validation:
+
+transactionReference,amount,status,transactionDate,senderName
+TRF_TEST_001,5000,SUCCESS,2026-09-01,Customer Name
+
+The absence of currency should not cause a validation failure in the current source.
+
+
+4. MOST LIKELY CODE-LEVEL FAILURE CAUSES
+=========================================
+
+Because the organization's format is supported by the current source, the most likely causes are infrastructure or request-shape issues.
+
+A. Render cannot write to ./data
+
+Multer writes to:
+
+./data
+
+If that directory does not exist in the deployed working directory, or is not writable, Multer can throw an ENOENT or permission-related exception before the controller executes.
+
+B. Multipart field name is wrong
+
+The backend requires:
+
+file
+
+If the frontend sends another field name, Multer can throw:
+
+MulterError: Unexpected field
+
+C. The deployed Render build is stale
+
+The current source supports:
+
+- transactionReference
+- senderName
+- missing currency
+- NGN default
+
+If Render is running an older deployment, it may still reject the CSV for missing:
+
+- reference
+- currency
+- customer
+
+D. The file contains formatting or data issues
+
+The current validator rejects a row if:
+
+- transactionReference/reference is empty
+- amount is missing or not numeric
+- status is empty
+- senderName/customer is empty
+- transactionDate/paidAt is empty
+
+E. File-size or extension rejection
+
+Files over 5 MB or extensions other than .csv, .xlsx, or .xls can fail in Multer before the controller.
+
+
+5. IS IMMEDIATE CSV VALIDATION HAPPENING?
+=========================================
+
+Yes.
+
+The upload does not merely store the file. It immediately runs:
+
+await CSVConnector.validateFile(uploadedPath);
+
+Only after validation succeeds does it add the file to the organization-scoped registry.
+
+
+6. IS THE REGISTRY WIRED CORRECTLY?
+===================================
+
+Yes.
+
+Application creates:
+
+new Map<string, UploadedLedgerFile>()
+
+The same registry instance is passed to:
+
+- ReconciliationService
+- ReconciliationController
+
+The upload controller stores:
+
+- fileId
+- organizationId
+- filePath
+- fileType
+- originalName
+
+No registry mismatch is present in the current source.
+
+
+7. MINIMAL FIX REQUIRED
+=======================
+
+The smallest fix depends on the exact Render log entry:
+
+- If the log says ENOENT or permission denied: ensure ./data exists and is writable at runtime.
+- If it says Unexpected field: make the frontend multipart field exactly file.
+- If it says missing columns: deploy the current backend build or correct the CSV headers.
+- If it says malformed row: correct the affected row values.
+- If it says file too large: keep the upload under 5 MB.
+- If it says Excel/CSV extension rejection: verify the uploaded filename extension.
+
+The current source does not show a single definitive CSV-format exception for the organization format described.
+
+
+8. DOES THE FIX AFFECT ONLY CSV/EXCEL UPLOAD?
+=============================================
+
+Yes.
+
+The upload failure surface is limited to:
+
+- Multer upload configuration
+- ReconciliationController.uploadCsv()
+- CSVConnector.validateFile()
+- ExcelConnector.validateFile()
+- Render filesystem/deployment configuration
+
+No changes are indicated for:
+
+- authentication
+- organization scope
+- Paystack
+- PostgreSQL
+- MySQL
+- MongoDB
+- reconciliation matching
+- reports
+- AI
+
+
+FINAL FINDING
+=============
+
+The current code correctly supports the updated organization CSV format and builds successfully.
+
+The exact production exception is not recoverable from source inspection alone because the global error handler hides it from the HTTP response. The Render log entry is required to distinguish between:
+
+- Multer filesystem/request error
+- CSV validation error
+- stale deployment
+
+The first Render log line containing AUDIT LOG, Message:, or the Multer exception will identify the exact cause.
