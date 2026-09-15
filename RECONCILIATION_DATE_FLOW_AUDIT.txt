@@ -1,0 +1,161 @@
+SYNC45 RECONCILIATION DATE-FLOW AUDIT
+=====================================
+
+AUDIT RESULT
+============
+
+The date range itself is valid.
+
+from: 2026-01-01
+to:   2026-09-15
+
+ReconciliationValidator.validate() accepts both values because:
+
+- Date.parse(from) succeeds.
+- Date.parse(to) succeeds.
+- from is before to.
+- There is no maximum date-range restriction.
+- The backend accepts standard date strings such as YYYY-MM-DD and ISO timestamps.
+
+Relevant file:
+
+src/api/validators/ReconciliationValidator.ts
+
+
+IMPORTANT CAUSE
+===============
+
+The current backend now requires ledgerSource in the reconciliation payload:
+
+const { organizationId, from, to, ledgerSource } = req.body;
+
+Then it rejects requests without it:
+
+ledgerSource is required.
+
+The current frontend payload is not available in this workspace, so its exact runtime request body could not be verified. The repository contains only the backend. However, the backend README still documents a payload without ledgerSource, which is outdated relative to the current validator.
+
+The frontend must send something like:
+
+{
+  "organizationId": "your-organization-id",
+  "from": "2026-01-01",
+  "to": "2026-09-15",
+  "ledgerSource": "postgresql"
+}
+
+The value must match the organization's configured ledger:
+
+- mongodb
+- postgresql
+- mysql
+- csv
+
+excel is currently rejected during reconciliation because global Excel files are not organization-isolated.
+
+
+DATE FLOW
+=========
+
+The route is registered in:
+
+src/api/routes/reconciliation.routes.ts
+
+Route:
+
+POST /api/reconciliation/reconcile
+
+Request flow:
+
+ReconciliationValidator.validate()
+  -> ReconciliationController.reconcile()
+  -> ReconciliationService.reconcile()
+  -> PaystackConnector.fetchTransactions()
+
+The controller passes the values unchanged:
+
+await this.reconciliationService.reconcile({
+  organizationId,
+  from,
+  to,
+  ledgerSource,
+  csvFileId,
+  csvFilePath,
+});
+
+The service passes them unchanged to Paystack:
+
+activePaystackConnector.fetchTransactions({
+  from: request.from,
+  to: request.to,
+});
+
+The Paystack connector sends:
+
+params: {
+  from: query.from,
+  to: query.to,
+  page: query.page ?? 1,
+  perPage: query.perPage ?? 50,
+}
+
+Relevant file:
+
+src/connectors/payment/paystack/PaystackConnector.ts
+
+Therefore, the date values are not being transformed or lost in the backend.
+
+
+EXACT ERROR SOURCE
+==================
+
+The exact frontend message:
+
+Reconciliation failed - Invalid request. Check that your date range is correct and try again.
+
+does not exist in the current backend source.
+
+The backend validator returns specific messages such as:
+
+- ledgerSource is required.
+- Invalid 'from' date.
+- Invalid 'to' date.
+- 'from' date cannot be after 'to' date.
+
+The frontend is likely converting any HTTP 400 response into the generic date-range message.
+
+
+BACKEND OR PAYSTACK?
+====================
+
+For the supplied dates, the failure is not caused by backend date validation.
+
+Most likely cause:
+
+The frontend is omitting ledgerSource.
+
+If ledgerSource is present, inspect the browser Network tab and confirm:
+
+- exact JSON request body
+- HTTP status
+- raw backend response message
+- whether the deployed Render backend is running the current code
+
+A Paystack failure would not normally produce the exact phrase shown. The Paystack connector sends the dates correctly, and Paystack errors are handled separately from the validator.
+
+
+SMALLEST REQUIRED FIX
+=====================
+
+Update the frontend reconciliation request to include the selected organization ledger provider:
+
+{
+  "organizationId": "...",
+  "from": "2026-01-01",
+  "to": "2026-09-15",
+  "ledgerSource": "mongodb"
+}
+
+Use the actual provider configured for that organization.
+
+No backend reconciliation algorithm or date logic needs to change based on the current code inspection.

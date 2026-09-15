@@ -16,8 +16,9 @@ const upload = multer({
     },
   }),
   fileFilter: (_req, file, cb) => {
-    if (path.extname(file.originalname).toLowerCase() !== ".csv") {
-      cb(new Error("Uploaded ledger file must be a CSV file."));
+    const extension = path.extname(file.originalname).toLowerCase();
+    if (![".csv", ".xlsx", ".xls"].includes(extension)) {
+      cb(new Error("Uploaded ledger file must be a CSV or Excel file."));
       return;
     }
     cb(null, true);

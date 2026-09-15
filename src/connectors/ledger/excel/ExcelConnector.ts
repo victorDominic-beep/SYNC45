@@ -211,18 +211,43 @@ export class CSVConnector implements Connector {
 export class ExcelConnector implements Connector {
   constructor(private readonly config: ExcelConfig) {}
 
+  static async validateFile(filePath: string): Promise<void> {
+    if (!path.extname(filePath).match(/^\.xlsx?$/i)) {
+      throw new Error("Uploaded ledger file must be an Excel file.");
+    }
+
+    await fs.access(filePath);
+    const workbook = XLSX.readFile(filePath);
+    const sheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[sheetName];
+    const rows = XLSX.utils.sheet_to_json(worksheet, { defval: null }) as Array<Record<string, any>>;
+    const requiredColumns = ["reference", "amount", "currency", "status", "customer", "paidAt"];
+    const headers = new Set(Object.keys(rows[0] || {}).map((key) => key.toLowerCase()));
+    const missing = requiredColumns.filter((column) => !headers.has(column.toLowerCase()));
+
+    if (!rows.length) {
+      throw new Error("Uploaded Excel file contains no rows.");
+    }
+
+    if (missing.length) {
+      throw new Error(`Uploaded Excel file is missing required columns: ${missing.join(", ")}.`);
+    }
+  }
+
   async connect(): Promise<void> {
-    XLSX.readFile(this.config.filePath);
+    await ExcelConnector.validateFile(this.config.filePath);
   }
 
   async fetchTransactions(): Promise<any[]> {
     const workbook = XLSX.readFile(this.config.filePath);
 
-    const worksheet = workbook.Sheets[this.config.sheetName];
+    const worksheet = workbook.Sheets[
+      this.config.sheetName || workbook.SheetNames[0]
+    ];
 
     if (!worksheet) {
       throw new Error(
-        `Sheet "${this.config.sheetName}" not found.`
+        `Sheet "${this.config.sheetName || workbook.SheetNames[0]}" not found.`
       );
     }
 
@@ -233,9 +258,7 @@ export class ExcelConnector implements Connector {
     try {
       const workbook = XLSX.readFile(this.config.filePath);
 
-      return Boolean(
-        workbook.Sheets[this.config.sheetName]
-      );
+      return Boolean(workbook.Sheets[this.config.sheetName || workbook.SheetNames[0]]);
     } catch {
       return false;
     }

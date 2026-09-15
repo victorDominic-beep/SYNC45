@@ -1,0 +1,319 @@
+SYNC45 CSV AND EXCEL LEDGER-SOURCE AUDIT
+=========================================
+
+This report describes the current backend only. No code changes were made.
+
+1. DOES CSVConnector STILL EXIST AND WORK?
+==========================================
+
+Yes.
+
+File:
+
+src/connectors/ledger/excel/ExcelConnector.ts
+
+CSVConnector:
+
+- Accepts a file path.
+- Requires the file extension to be .csv.
+- Validates required columns:
+  - reference
+  - amount
+  - currency
+  - status
+  - customer
+  - paidAt
+- Converts rows into canonical transaction objects.
+- Implements connect(), fetchTransactions(), healthCheck(), and disconnect().
+
+The existing CSV implementation is used by ReconciliationService.
+
+
+2. DOES ExcelConnector STILL EXIST AND WORK?
+============================================
+
+Yes, but only for a configured server-side Excel file.
+
+ExcelConnector:
+
+- Reads an Excel workbook using xlsx.
+- Uses a configured file path and sheet name.
+- Reads transactions from the configured worksheet.
+- Implements the connector lifecycle methods.
+- Supports .xlsx and .xls files through XLSX.readFile().
+
+However, it is not currently usable for uploaded organization files because reconciliation explicitly rejects the excel source:
+
+Global Excel files are not organization-isolated and cannot be used for organization reconciliation.
+
+Relevant file:
+
+src/reconciliation/services/ReconciliationService.ts
+
+
+3. CURRENT CSV/FILE UPLOAD ROUTES
+=================================
+
+Currently available:
+
+POST /api/reconciliation/upload-csv
+
+Defined in:
+
+src/api/routes/reconciliation.routes.ts
+
+Behavior:
+
+- Requires authentication.
+- Accepts multipart form-data.
+- Expects the field name file.
+- Only accepts .csv.
+- Maximum file size is 5 MB.
+- Saves files under ./data.
+- Validates the CSV immediately.
+- Stores the generated file ID and path in an in-memory Map.
+- Returns a fileId.
+
+There is currently no Excel upload route.
+
+
+4. DOES RECONCILIATION ACCEPT csvFileId OR csvFilePath?
+=======================================================
+
+Yes.
+
+ReconciliationController.reconcile() accepts:
+
+{
+  "organizationId": "org-id",
+  "from": "2026-01-01",
+  "to": "2026-09-15",
+  "ledgerSource": "csv",
+  "csvFileId": "uploaded-file-id"
+}
+
+It also accepts:
+
+{
+  "organizationId": "org-id",
+  "from": "2026-01-01",
+  "to": "2026-09-15",
+  "ledgerSource": "csv",
+  "csvFilePath": "./data/file.csv"
+}
+
+The service resolves the path using:
+
+const filePath = request.csvFileId
+  ? this.csvUploadRegistry?.get(request.csvFileId)
+  : request.csvFilePath;
+
+Relevant files:
+
+- src/api/controllers/ReconciliationController.ts
+- src/reconciliation/services/ReconciliationService.ts
+
+
+5. CAN THE CURRENT SERVICE RECONCILE AGAINST AN UPLOADED CSV?
+==============================================================
+
+Yes.
+
+Current flow:
+
+POST /api/reconciliation/upload-csv
+  -> CSV file saved and validated
+  -> fileId returned
+
+POST /api/reconciliation/reconcile
+  -> ledgerSource: "csv"
+  -> csvFileId supplied
+  -> CSVConnector created
+  -> CSV transactions loaded
+  -> normalized
+  -> matched
+  -> classified
+  -> report generated
+  -> AI insights generated
+
+The uploaded CSV is deleted after reconciliation in the service finally block.
+
+CSV support is therefore mostly implemented.
+
+
+6. CAN IT RECONCILE AGAINST AN UPLOADED EXCEL FILE?
+===================================================
+
+No.
+
+Although ExcelConnector exists, the current upload route rejects Excel files and the reconciliation service rejects:
+
+ledgerSource: "excel"
+
+The service only permits Excel conceptually for the old global connector architecture, but the current organization-only reconciliation path intentionally throws an error for excel.
+
+Uploaded Excel reconciliation is not currently supported.
+
+
+7. IS FILE HANDLING ORGANIZATION-SCOPED?
+=========================================
+
+Only partially.
+
+AUTHENTICATION
+
+The upload route requires an authenticated user:
+
+requireAuth(application.postgresRepository)
+
+ORGANIZATION SCOPE
+
+The upload route does not use requireOrganizationScope.
+
+It has no organization ID in the route or upload request body requirement.
+
+FILE REGISTRY
+
+The file registry is:
+
+new Map<string, string>()
+
+It stores:
+
+fileId -> file path
+
+It does not store:
+
+- organization ID
+- user ID
+- file type
+- expiration time
+- original filename metadata
+
+Therefore, any authenticated user who obtains another file ID could potentially submit that ID during reconciliation, provided the reconciliation request uses their own organization ID.
+
+csvFilePath is also accepted directly from the request body, which is not organization-scoped and may allow arbitrary server path references.
+
+CONCLUSION
+
+Current CSV file handling is authenticated but not properly organization-scoped.
+
+
+8. EXISTING FILES THAT WOULD NEED CHANGES
+=========================================
+
+No new folders or architecture are required.
+
+Likely existing files to modify:
+
+src/api/routes/reconciliation.routes.ts
+
+Needed for:
+
+- Accepting .csv and Excel extensions.
+- Adding or updating the upload route.
+- Applying organization scope to uploaded files.
+- Possibly requiring organization ID in the upload request.
+
+src/api/controllers/ReconciliationController.ts
+
+Needed for:
+
+- Handling both CSV and Excel uploads.
+- Recording organization ownership.
+- Returning file metadata.
+- Validating uploaded Excel files.
+- Rejecting files belonging to another organization during reconciliation.
+
+src/bootstrap/Application.ts
+
+Currently defines:
+
+public readonly csvUploadRegistry = new Map<string, string>();
+
+This would need to become an organization-aware file registry, for example storing metadata including:
+
+- fileId
+- organizationId
+- filePath
+- fileType
+
+The existing property can be modified without creating a new architecture.
+
+src/reconciliation/services/ReconciliationService.ts
+
+Needed for:
+
+- Accepting an uploaded Excel file reference.
+- Creating ExcelConnector from the uploaded file.
+- Selecting the correct normalization path.
+- Cleaning up uploaded Excel files after reconciliation.
+- Rejecting file IDs that belong to another organization.
+
+The current csv branch can remain intact.
+
+src/connectors/ledger/excel/ExcelConnector.ts
+
+Likely changes:
+
+- Add uploaded-file configuration support if necessary.
+- Validate the selected worksheet.
+- Potentially normalize Excel rows consistently with CSV rows.
+
+The connector already supports file paths and sheet names, so it may require only limited changes.
+
+src/connectors/ledger/excel/ExcelConfig.ts
+
+Review or extend if uploaded Excel files need a dynamic sheet name.
+
+src/api/validators/ReconciliationValidator.ts
+
+Needed if the allowed ledger source list is expanded or if excel needs additional file ID validation.
+
+Currently it already accepts:
+
+- excel
+- csv
+
+but the service rejects excel.
+
+
+CURRENT SUMMARY
+===============
+
+ALREADY EXISTS
+
+- CSVConnector
+- ExcelConnector
+- CSV upload route
+- CSV validation
+- CSV file IDs
+- csvFileId reconciliation support
+- csvFilePath reconciliation support
+- CSV normalization
+- Excel normalization path in ReconciliationService
+- Cleanup of uploaded CSV files after reconciliation
+
+MISSING
+
+- Excel upload support
+- Excel drag-and-drop backend acceptance
+- Organization ownership metadata for uploaded files
+- Organization-scope validation for uploads
+- File ownership validation during reconciliation
+- Safe handling that prevents arbitrary csvFilePath access
+- Uploaded Excel cleanup
+- A clear uploaded-file type in the reconciliation request
+
+
+FINAL VERDICT
+=============
+
+CSV reconciliation is currently implemented, but uploaded CSV files are not fully organization-scoped.
+
+Excel support exists only as a connector for configured server-side files. Uploaded Excel reconciliation is not implemented because:
+
+1. The upload route accepts only .csv.
+2. The controller only validates CSV files.
+3. The reconciliation service rejects ledgerSource: "excel" for organization reconciliation.
+4. The in-memory file registry does not track organization ownership or file type.

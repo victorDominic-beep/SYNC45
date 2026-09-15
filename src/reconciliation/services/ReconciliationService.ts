@@ -19,6 +19,8 @@ import { OrganizationService } from "../../organizations/OrganizationService";
 import { promises as fs } from "fs";
 import { AppError } from "../../errors/AppError";
 import { ErrorCode } from "../../errors/ErrorCode";
+import { UploadedLedgerFile } from "../../bootstrap/Application";
+import { ExcelConnector } from "../../connectors/ledger/excel/ExcelConnector";
 
 type LedgerSource = "mongodb" | "postgresql" | "mysql" | "excel" | "csv";
 
@@ -27,7 +29,6 @@ export interface ReconciliationRequest {
   from: string;
   to: string;
   ledgerSource?: LedgerSource;
-  csvFilePath?: string;
   csvFileId?: string;
 }
 
@@ -35,7 +36,7 @@ export class ReconciliationService {
   constructor(
     private readonly aiInsightService: AIInsightService,
     private readonly reconciliationRepository: ReconciliationRepository,
-    private readonly csvUploadRegistry?: Map<string, string>,
+    private readonly csvUploadRegistry?: Map<string, UploadedLedgerFile>,
     private readonly organizationService?: OrganizationService
   ) {}
 
@@ -48,41 +49,65 @@ export class ReconciliationService {
     >;
   }> {
     const requestedSource = request.ledgerSource;
-    const filePath = request.csvFileId
+    const uploadedFile = request.csvFileId
       ? this.csvUploadRegistry?.get(request.csvFileId)
-      : request.csvFilePath;
+      : undefined;
+    const filePath = uploadedFile?.filePath;
 
-    let activePaystackConnector: PaystackConnector;
-    let activeConnector: Connector;
-    let activeSource: LedgerSource;
-    let startedCsvConnector = false;
+    let activePaystackConnector!: PaystackConnector;
+    let activeConnector!: Connector;
+    let activeSource!: LedgerSource;
 
-    // If an organization has stored new credentials, prefer the requested connector type
-    // for that organization. If the request sends no ledgerSource override, the existing
-    // environment configuration remains the default fallback.
-    if (!request.organizationId || !requestedSource || !this.organizationService) {
-      throw new AppError(
-        "Organization and ledger source are required for reconciliation.",
-        ErrorCode.INVALID_REQUEST,
-        422
-      );
-    }
+    try {
+      if (!request.organizationId || !requestedSource || !this.organizationService) {
+        throw new AppError(
+          "Organization and ledger source are required for reconciliation.",
+          ErrorCode.INVALID_REQUEST,
+          422
+        );
+      }
 
-    const savedConnections =
-      await this.organizationService.resolveConnectionConfig(request.organizationId);
+      const savedConnections =
+        await this.organizationService.resolveConnectionConfig(request.organizationId);
 
-    if (!savedConnections?.paystack?.secretKey) {
-      throw new AppError(
-        "Paystack connection is not configured for this organization.",
-        ErrorCode.PAYMENT_CONNECTOR_FAILED,
-        422
-      );
-    }
+      if (requestedSource === "csv" || requestedSource === "excel") {
+        if (!uploadedFile) {
+          throw new AppError(
+            "An uploaded ledger file is required.",
+            ErrorCode.INVALID_REQUEST,
+            422
+          );
+        }
 
-    activePaystackConnector = new PaystackConnector(savedConnections.paystack.secretKey);
-    activeSource = requestedSource;
+        if (uploadedFile.organizationId !== request.organizationId) {
+          throw new AppError(
+            "You do not have access to this uploaded file.",
+            ErrorCode.FORBIDDEN,
+            403
+          );
+        }
 
-    switch (requestedSource) {
+        if (uploadedFile.fileType !== requestedSource) {
+          throw new AppError(
+            `Uploaded file type does not match ledgerSource ${requestedSource}.`,
+            ErrorCode.INVALID_REQUEST,
+            422
+          );
+        }
+      }
+
+      if (!savedConnections?.paystack?.secretKey) {
+        throw new AppError(
+          "Paystack connection is not configured for this organization.",
+          ErrorCode.PAYMENT_CONNECTOR_FAILED,
+          422
+        );
+      }
+
+      activePaystackConnector = new PaystackConnector(savedConnections.paystack.secretKey);
+      activeSource = requestedSource;
+
+      switch (requestedSource) {
       case "mongodb":
         if (!savedConnections.mongodb?.uri) {
           throw new AppError("MongoDB connection is not configured for this organization.", ErrorCode.LEDGER_CONNECTOR_FAILED, 422);
@@ -120,11 +145,12 @@ export class ReconciliationService {
         });
         break;
       case "excel":
-        throw new AppError(
-          "Global Excel files are not organization-isolated and cannot be used for organization reconciliation.",
-          ErrorCode.LEDGER_CONNECTOR_FAILED,
-          422
-        );
+        activeConnector = new ExcelConnector({
+          filePath: filePath as string,
+          sheetName: "",
+        });
+        activeSource = "excel";
+        break;
       case "csv":
         if (!filePath) {
           throw new AppError(
@@ -133,17 +159,15 @@ export class ReconciliationService {
             422
           );
         }
-        activeConnector = new CSVConnector({ filePath: filePath || "" });
+        activeConnector = new CSVConnector({ filePath: filePath as string });
         activeSource = "csv";
-        startedCsvConnector = true;
         break;
       default:
         throw new AppError("Unsupported ledger source.", ErrorCode.INVALID_REQUEST, 422);
-    }
+      }
 
-    await activeConnector.connect();
+      await activeConnector.connect();
 
-    try {
       const rawPaystackTransactions =
         await activePaystackConnector.fetchTransactions({
           from: request.from,
@@ -204,13 +228,16 @@ export class ReconciliationService {
         insights,
       };
     } finally {
-      await activeConnector.disconnect();
-      if (startedCsvConnector && filePath) {
+      if (activeConnector) {
+        await activeConnector.disconnect().catch(() => undefined);
+      }
+      if (uploadedFile && filePath) {
         try {
           await fs.unlink(filePath);
         } catch {
           // uploaded CSV can already be removed by the environment
         }
+        this.csvUploadRegistry?.delete(uploadedFile.fileId);
       }
     }
   }

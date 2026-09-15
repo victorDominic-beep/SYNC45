@@ -16,6 +16,16 @@ import { UserController } from "../users/UserController";
 import { UserService } from "../users/UserService";
 import { PostgresRepository } from "../repositories/PostgresRepository";
 
+export type UploadedLedgerFileType = "csv" | "excel";
+
+export interface UploadedLedgerFile {
+  fileId: string;
+  organizationId: string;
+  filePath: string;
+  fileType: UploadedLedgerFileType;
+  originalName: string;
+}
+
 export class Application {
   public readonly reconciliationController: ReconciliationController;
   public readonly reconciliationJob: ReconciliationJob;
@@ -23,7 +33,7 @@ export class Application {
   public readonly aiController: AIController;
   public readonly aiInsightService: AIInsightService;
   public readonly reconciliationRepository: ReconciliationRepository;
-  public readonly csvUploadRegistry = new Map<string, string>();
+  public readonly csvUploadRegistry = new Map<string, UploadedLedgerFile>();
   public readonly organizationService: OrganizationService;
   public readonly organizationController: OrganizationController;
   public readonly userService: UserService;

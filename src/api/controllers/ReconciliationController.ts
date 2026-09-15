@@ -5,12 +5,14 @@ import path from "path";
 import { ReconciliationService } from "../../reconciliation/services/ReconciliationService";
 import { ReconciliationRepository } from "../../repositories/ReconciliationRepository";
 import { CSVConnector } from "../../connectors/ledger/excel/ExcelConnector";
+import { ExcelConnector } from "../../connectors/ledger/excel/ExcelConnector";
+import type { UploadedLedgerFile } from "../../bootstrap/Application";
 
 export class ReconciliationController {
   constructor(
     private readonly reconciliationService: ReconciliationService,
     private readonly reconciliationRepository: ReconciliationRepository,
-    private readonly csvUploadRegistry: Map<string, string>
+    private readonly csvUploadRegistry: Map<string, UploadedLedgerFile>
   ) {}
 
   async reconcile(
@@ -19,7 +21,7 @@ export class ReconciliationController {
     next: NextFunction
   ): Promise<void> {
     try {
-      const { organizationId, from, to, ledgerSource, csvFileId, csvFilePath } = req.body;
+      const { organizationId, from, to, ledgerSource, csvFileId } = req.body;
 
       if (!organizationId || !from || !to) {
         res.status(400).json({
@@ -29,19 +31,37 @@ export class ReconciliationController {
         return;
       }
 
-      if (ledgerSource === "csv") {
-        if (!csvFileId && !csvFilePath) {
+      if (ledgerSource === "csv" || ledgerSource === "excel") {
+        if (!csvFileId) {
           res.status(400).json({
             success: false,
-            message: "csvFileId or csvFilePath is required when ledgerSource is csv.",
+            message: "csvFileId is required when using an uploaded ledger file.",
           });
           return;
         }
 
-        if (csvFileId && !this.csvUploadRegistry.has(csvFileId)) {
+        const uploadedFile = this.csvUploadRegistry.get(csvFileId);
+        const userOrganizationId = String(req.user?.organizationId || "");
+        if (!uploadedFile) {
           res.status(400).json({
             success: false,
             message: "Uploaded CSV file reference is invalid or expired.",
+          });
+          return;
+        }
+
+        if (uploadedFile.organizationId !== userOrganizationId) {
+          res.status(403).json({
+            success: false,
+            message: "You do not have access to this uploaded file.",
+          });
+          return;
+        }
+
+        if (uploadedFile.fileType !== ledgerSource) {
+          res.status(400).json({
+            success: false,
+            message: `Uploaded file type does not match ledgerSource ${ledgerSource}.`,
           });
           return;
         }
@@ -53,7 +73,6 @@ export class ReconciliationController {
         to,
         ledgerSource,
         csvFileId,
-        csvFilePath,
       });
 
       res.status(200).json({
@@ -71,42 +90,59 @@ export class ReconciliationController {
     res: Response,
     next: NextFunction
   ): Promise<void> {
+    let uploadedPath: string | undefined;
     try {
       if (!req.file) {
         res.status(400).json({
           success: false,
-          message: "CSV file is required.",
+          message: "CSV or Excel file is required.",
         });
         return;
       }
 
-      const uploadedPath = req.file.path;
+      uploadedPath = req.file.path;
       const ext = path.extname(req.file.originalname).toLowerCase();
+      const fileType = ext === ".csv" ? "csv" : "excel";
 
-      if (ext !== ".csv") {
+      if (![".csv", ".xlsx", ".xls"].includes(ext)) {
         await fs.unlink(uploadedPath).catch(() => undefined);
         res.status(400).json({
           success: false,
-          message: "Uploaded ledger file must be a CSV file.",
+          message: "Uploaded ledger file must be a CSV or Excel file.",
         });
         return;
       }
 
-      await CSVConnector.validateFile(uploadedPath);
+      if (fileType === "csv") {
+        await CSVConnector.validateFile(uploadedPath);
+      } else {
+        await ExcelConnector.validateFile(uploadedPath);
+      }
 
       const fileId = uuidv4();
-      this.csvUploadRegistry.set(fileId, uploadedPath);
+      const organizationId = String(req.user?.organizationId || "");
+      this.csvUploadRegistry.set(fileId, {
+        fileId,
+        organizationId,
+        filePath: uploadedPath,
+        fileType,
+        originalName: req.file.originalname,
+      });
 
       res.status(201).json({
         success: true,
-        message: "CSV ledger uploaded successfully.",
+        message: `${fileType === "csv" ? "CSV" : "Excel"} ledger uploaded successfully.`,
         data: {
           fileId,
+          fileType,
           fileName: req.file.originalname,
           size: req.file.size,
         },
       });
     } catch (error) {
+      if (uploadedPath) {
+        await fs.unlink(uploadedPath).catch(() => undefined);
+      }
       next(error);
     }
   }
