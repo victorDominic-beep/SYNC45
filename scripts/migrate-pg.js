@@ -3,13 +3,15 @@ const { Pool } = require('pg');
 
 (async () => {
   const pool = new Pool({
-    host: process.env.POSTGRESQL_HOST || process.env.POSTGRES_HOST || 'localhost',
-    port: Number(process.env.POSTGRESQL_PORT || process.env.POSTGRES_PORT || 5432),
-    database: process.env.POSTGRESQL_DATABASE || process.env.POSTGRES_DB || 'sync45_test',
-    user: process.env.POSTGRESQL_USER || process.env.POSTGRES_USER || 'postgres',
-    password: process.env.POSTGRESQL_PASSWORD || process.env.POSTGRES_PASSWORD || 'admin',
-  });
-
+  host: process.env.POSTGRESQL_HOST || process.env.POSTGRES_HOST || 'localhost',
+  port: Number(process.env.POSTGRESQL_PORT || process.env.POSTGRES_PORT || 5432),
+  database: process.env.POSTGRESQL_DATABASE || process.env.POSTGRES_DB || 'sync45_test',
+  user: process.env.POSTGRESQL_USER || process.env.POSTGRES_USER || 'postgres',
+  password: process.env.POSTGRESQL_PASSWORD || process.env.POSTGRES_PASSWORD || 'admin',
+  ssl: {
+    rejectUnauthorized: false,
+  },
+});
   try {
     await pool.query(`CREATE SCHEMA IF NOT EXISTS sync45;`);
     await pool.query(`

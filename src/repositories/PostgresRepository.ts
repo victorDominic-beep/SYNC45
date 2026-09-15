@@ -11,6 +11,11 @@ export class PostgresRepository {
       database: PostgreSQLRuntimeConfig.DATABASE,
       user: PostgreSQLRuntimeConfig.USER,
       password: PostgreSQLRuntimeConfig.PASSWORD,
+      ssl: PostgreSQLRuntimeConfig.SSL
+        ? {
+            rejectUnauthorized: PostgreSQLRuntimeConfig.SSL_REJECT_UNAUTHORIZED,
+          }
+        : false,
     });
   }
 

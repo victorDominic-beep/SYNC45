@@ -12,6 +12,7 @@ export class PostgreSQLConnector implements Connector {
       database: config.database,
       user: config.user,
       password: config.password,
+      ssl: config.ssl ?? false,
     });
   }
 

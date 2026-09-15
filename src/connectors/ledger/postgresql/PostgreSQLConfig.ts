@@ -5,4 +5,5 @@ export interface PostgreSQLConfig {
   user: string;
   password: string;
   table: string;
+  ssl?: boolean | { rejectUnauthorized?: boolean; ca?: string; cert?: string; key?: string };
 }

@@ -20,4 +20,30 @@ export class PostgreSQLRuntimeConfig {
     process.env.POSTGRESQL_PASSWORD ||
     process.env.POSTGRES_PASSWORD ||
     "admin";
+
+  static readonly SSL = PostgreSQLRuntimeConfig.parseBoolean(
+    process.env.POSTGRESQL_SSL ||
+    process.env.PGSSLMODE ||
+    "false"
+  );
+
+  static readonly SSL_REJECT_UNAUTHORIZED = PostgreSQLRuntimeConfig.parseBoolean(
+    process.env.POSTGRESQL_SSL_REJECT_UNAUTHORIZED ||
+    "false"
+  );
+
+  private static parseBoolean(value: string): boolean {
+    if (!value) return false;
+
+    const normalized = value.trim().toLowerCase();
+    return [
+      "1",
+      "true",
+      "yes",
+      "on",
+      "require",
+      "verify-ca",
+      "verify-full",
+    ].includes(normalized);
+  }
 }
