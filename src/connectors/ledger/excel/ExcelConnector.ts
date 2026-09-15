@@ -12,8 +12,8 @@ export interface CSVConfig {
 export class CSVConnector implements Connector {
   private static readonly canonicalColumnAliases: Record<string, string[]> = {
     reference: [
-      "transactionReference",
       "reference",
+      "transactionReference",
       "transactionRef",
       "transaction_ref",
       "transactionId",
