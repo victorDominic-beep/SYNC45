@@ -12,6 +12,7 @@ export class CSVConnector implements Connector {
   private static readonly canonicalColumnAliases: Record<string, string[]> = {
     reference: [
       "reference",
+      "transactionReference",
       "transactionRef",
       "transaction_ref",
       "transactionId",
@@ -46,6 +47,7 @@ export class CSVConnector implements Connector {
     ],
     customer: [
       "customer",
+      "senderName",
       "customerEmail",
       "customer_email",
       "customerName",
@@ -94,7 +96,10 @@ export class CSVConnector implements Connector {
     }
 
     const headerMap = CSVConnector.getCanonicalHeaders(rows[0] as Record<string, any>);
-    const missing = CSVConnector.canonicalColumns.filter(
+    const requiredColumns = CSVConnector.canonicalColumns.filter(
+      (column) => column !== "currency"
+    );
+    const missing = requiredColumns.filter(
       (column) => !headerMap[column]
     );
 
@@ -107,14 +112,12 @@ export class CSVConnector implements Connector {
     for (const row of rows as Array<Record<string, any>>) {
       const reference = CSVConnector.getMappedValue(row, "reference");
       const amount = CSVConnector.getMappedValue(row, "amount");
-      const currency = CSVConnector.getMappedValue(row, "currency");
       const status = CSVConnector.getMappedValue(row, "status");
       const customer = CSVConnector.getMappedValue(row, "customer");
       const paidAt = CSVConnector.getMappedValue(row, "paidAt");
 
       if (
         !reference ||
-        !currency ||
         !status ||
         !customer ||
         !paidAt ||
@@ -165,7 +168,7 @@ export class CSVConnector implements Connector {
     return {
       reference: CSVConnector.getMappedValue(row, "reference")?.trim(),
       amount: Number(CSVConnector.getMappedValue(row, "amount") ?? 0),
-      currency: String(CSVConnector.getMappedValue(row, "currency") ?? "")
+      currency: String(CSVConnector.getMappedValue(row, "currency") ?? "NGN")
         .trim()
         .toUpperCase(),
       status: String(CSVConnector.getMappedValue(row, "status") ?? "")
