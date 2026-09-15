@@ -172,6 +172,36 @@ export class OrganizationController {
     }
   };
 
+  public testConnections = async (
+    req: Request<OrganizationParams>,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const result = await this.organizationService.testConnections(
+        req.params.id
+      );
+
+      const successful = result.paystack && result.ledger;
+      const message = !result.paystack && !result.configuredLedger
+        ? "Paystack and ledger connections are not configured."
+        : successful
+          ? "All configured connections tested successfully."
+          : "One or more configured connections failed.";
+
+      res.status(200).json({
+        success: successful,
+        data: {
+          paystack: result.paystack,
+          ledger: result.ledger,
+        },
+        message,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
   public activate = async (
     req: Request<OrganizationParams>,
     res: Response,

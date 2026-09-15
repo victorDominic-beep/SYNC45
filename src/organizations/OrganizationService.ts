@@ -1,6 +1,11 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "crypto";
 import { Organization, OrganizationConnectionSettings } from "./Organization";
 import { PostgresRepository } from "../repositories/PostgresRepository";
+import { PaystackConnector } from "../connectors/payment/paystack/PaystackConnector";
+import { MongoDBConnector } from "../connectors/ledger/mongodb/MongoDBConnector";
+import { PostgreSQLConnector } from "../connectors/ledger/postgresql/PostgreSQLConnector";
+import { MySQLConnector } from "../connectors/ledger/mysql/MySQLConnector";
+import { Connector } from "../shared/interfaces/Connector";
 
 export class OrganizationService {
   private readonly organizations: Organization[] = [];
@@ -469,6 +474,83 @@ export class OrganizationService {
     }
 
     return resolved;
+  }
+
+  async testConnections(
+    organizationId: string
+  ): Promise<{ paystack: boolean; ledger: boolean; configuredLedger: boolean }> {
+    const organization = await this.findById(organizationId);
+    if (!organization || !organization.isActive) {
+      throw new Error("Organization not found or inactive.");
+    }
+
+    const connections = await this.resolveConnectionConfig(organizationId);
+    let paystack = false;
+
+    if (connections?.paystack?.secretKey) {
+      paystack = await new PaystackConnector(
+        connections.paystack.secretKey
+      ).testConnection();
+    }
+
+    const ledgerConnectors: Connector[] = [];
+
+    if (connections?.mongodb?.uri) {
+      ledgerConnectors.push(
+        new MongoDBConnector({
+          uri: connections.mongodb.uri,
+          database: connections.mongodb.database || "sync45",
+          collection: connections.mongodb.collection || "transactions",
+        })
+      );
+    }
+
+    if (connections?.postgresql?.password) {
+      ledgerConnectors.push(
+        new PostgreSQLConnector({
+          host: connections.postgresql.host || "localhost",
+          port: connections.postgresql.port || 5432,
+          database: connections.postgresql.database || "sync45",
+          user: connections.postgresql.user || "postgres",
+          password: connections.postgresql.password,
+          table: connections.postgresql.table || "transactions",
+        })
+      );
+    }
+
+    if (connections?.mysql?.password) {
+      ledgerConnectors.push(
+        new MySQLConnector({
+          host: connections.mysql.host || "localhost",
+          port: connections.mysql.port || 3306,
+          database: connections.mysql.database || "sync45",
+          user: connections.mysql.user || "root",
+          password: connections.mysql.password,
+          table: connections.mysql.table || "transactions",
+        })
+      );
+    }
+
+    if (!ledgerConnectors.length) {
+      return { paystack, ledger: false, configuredLedger: false };
+    }
+
+    const ledgerResults: boolean[] = [];
+    for (const connector of ledgerConnectors) {
+      try {
+        ledgerResults.push(await connector.healthCheck());
+      } catch {
+        ledgerResults.push(false);
+      } finally {
+        await connector.disconnect().catch(() => undefined);
+      }
+    }
+
+    return {
+      paystack,
+      ledger: ledgerResults.every(Boolean),
+      configuredLedger: true,
+    };
   }
 
   async activate(id: string): Promise<boolean> {

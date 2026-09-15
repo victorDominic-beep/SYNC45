@@ -84,6 +84,19 @@ export function createOrganizationRoutes(application: Application): Router {
   );
 
   router.post(
+    "/organizations/:id/connections/test",
+    requireAuth(application.postgresRepository),
+    requireOrganizationScope,
+    (req: Request, res: Response, next: NextFunction) => {
+      void organizationController.testConnections(
+        req as unknown as Request<OrganizationParams>,
+        res,
+        next
+      );
+    }
+  );
+
+  router.post(
     "/connections",
     requireAuth(application.postgresRepository),
     requireOrganizationScope,
