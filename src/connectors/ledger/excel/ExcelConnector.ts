@@ -3,6 +3,7 @@ import { promises as fs } from "fs";
 import path from "path";
 import { ExcelConfig } from "./ExcelConfig";
 import { Connector } from "../../../shared/interfaces/Connector";
+import { InvalidLedgerRow } from "../../../shared/types/ReconciliationReport";
 
 export interface CSVConfig {
   filePath: string;
@@ -11,8 +12,8 @@ export interface CSVConfig {
 export class CSVConnector implements Connector {
   private static readonly canonicalColumnAliases: Record<string, string[]> = {
     reference: [
-      "reference",
       "transactionReference",
+      "reference",
       "transactionRef",
       "transaction_ref",
       "transactionId",
@@ -46,8 +47,8 @@ export class CSVConnector implements Connector {
       "state",
     ],
     customer: [
-      "customer",
       "senderName",
+      "customer",
       "customerEmail",
       "customer_email",
       "customerName",
@@ -57,11 +58,11 @@ export class CSVConnector implements Connector {
       "payer_email",
     ],
     paidAt: [
+      "transactionDate",
       "paidAt",
       "paid_at",
       "createdAt",
       "created_at",
-      "transactionDate",
       "transaction_date",
       "processedAt",
       "processed_at",
@@ -71,6 +72,8 @@ export class CSVConnector implements Connector {
   static readonly canonicalColumns = Object.keys(
     CSVConnector.canonicalColumnAliases
   );
+
+  private invalidLedgerRows: InvalidLedgerRow[] = [];
 
   constructor(private readonly config: CSVConfig) {}
 
@@ -109,25 +112,6 @@ export class CSVConnector implements Connector {
       );
     }
 
-    for (const row of rows as Array<Record<string, any>>) {
-      const reference = CSVConnector.getMappedValue(row, "reference");
-      const amount = CSVConnector.getMappedValue(row, "amount");
-      const status = CSVConnector.getMappedValue(row, "status");
-      const paidAt = CSVConnector.getMappedValue(row, "paidAt");
-
-      if (
-        !reference ||
-        !status ||
-        !paidAt ||
-        amount === undefined ||
-        amount === null ||
-        Number.isNaN(Number(amount))
-      ) {
-        throw new Error(
-          "Uploaded CSV file contains a malformed row or unsupported value."
-        );
-      }
-    }
   }
 
   private static getCanonicalHeaders(row: Record<string, any>): Record<string, string> {
@@ -151,9 +135,13 @@ export class CSVConnector implements Connector {
       (alias) => alias.toLowerCase()
     );
 
-    const key = Object.keys(row).find((field) =>
-      aliases.includes(field.toLowerCase())
-    );
+    const key = aliases
+      .map((alias) =>
+        Object.keys(row).find(
+          (field) => field.toLowerCase() === alias
+        )
+      )
+      .find((field): field is string => Boolean(field));
 
     if (!key) {
       return undefined;
@@ -179,6 +167,28 @@ export class CSVConnector implements Connector {
     };
   }
 
+  private static getInvalidFields(row: Record<string, any>): string[] {
+    const missingFields: string[] = [];
+    const reference = CSVConnector.getMappedValue(row, "reference")?.trim();
+    const amount = CSVConnector.getMappedValue(row, "amount")?.trim();
+    const status = CSVConnector.getMappedValue(row, "status")?.trim();
+    const paidAt = CSVConnector.getMappedValue(row, "paidAt")?.trim();
+
+    if (!reference) missingFields.push("transactionReference/reference");
+    if (!amount || Number.isNaN(Number(amount))) missingFields.push("amount");
+    if (!status) missingFields.push("status");
+    if (!paidAt) missingFields.push("transactionDate/paidAt");
+
+    return missingFields;
+  }
+
+  getInvalidLedgerRows(): InvalidLedgerRow[] {
+    return this.invalidLedgerRows.map((row) => ({
+      rowNumber: row.rowNumber,
+      missingFields: [...row.missingFields],
+    }));
+  }
+
   async connect(): Promise<void> {
     await CSVConnector.validateFile(this.config.filePath);
   }
@@ -192,7 +202,20 @@ export class CSVConnector implements Connector {
       defval: null,
     }) as Array<Record<string, any>>;
 
-    return rows.map((row) => CSVConnector.toCanonicalTransaction(row));
+    this.invalidLedgerRows = [];
+
+    return rows.flatMap((row, index) => {
+      const invalidFields = CSVConnector.getInvalidFields(row);
+      if (invalidFields.length) {
+        this.invalidLedgerRows.push({
+          rowNumber: index + 2,
+          missingFields: invalidFields,
+        });
+        return [];
+      }
+
+      return [CSVConnector.toCanonicalTransaction(row)];
+    });
   }
 
   async healthCheck(): Promise<boolean> {

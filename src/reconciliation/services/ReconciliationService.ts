@@ -21,6 +21,7 @@ import { AppError } from "../../errors/AppError";
 import { ErrorCode } from "../../errors/ErrorCode";
 import { UploadedLedgerFile } from "../../bootstrap/Application";
 import { ExcelConnector } from "../../connectors/ledger/excel/ExcelConnector";
+import { InvalidLedgerRow } from "../../shared/types/ReconciliationReport";
 
 type LedgerSource = "mongodb" | "postgresql" | "mysql" | "excel" | "csv";
 
@@ -176,6 +177,10 @@ export class ReconciliationService {
 
       const rawLedgerTransactions =
         await activeConnector.fetchTransactions();
+      const invalidLedgerRows: InvalidLedgerRow[] =
+        activeConnector instanceof CSVConnector
+          ? activeConnector.getInvalidLedgerRows()
+          : [];
 
       const paymentTransactions = rawPaystackTransactions.map(
         (transaction: any) =>
@@ -215,7 +220,8 @@ export class ReconciliationService {
       const report = ReportGenerator.generate(
         request.organizationId,
         matched,
-        classifiedDiscrepancies
+        classifiedDiscrepancies,
+        invalidLedgerRows
       );
 
       const insights =

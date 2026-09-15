@@ -66,8 +66,14 @@ const sslEnabled = isTruthy(
         generated_at TIMESTAMP NOT NULL,
         statistics JSONB NOT NULL,
         discrepancies JSONB NOT NULL,
+        invalid_ledger_rows JSONB,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+    `);
+
+    await pool.query(`
+      ALTER TABLE sync45.reconciliation_reports
+      ADD COLUMN IF NOT EXISTS invalid_ledger_rows JSONB;
     `);
 
     await pool.query(`

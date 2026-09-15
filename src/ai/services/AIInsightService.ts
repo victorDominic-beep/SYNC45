@@ -13,12 +13,22 @@ export class AIInsightService {
     try {
       return await this.provider.generateInsights(report);
     } catch {
+      const invalidRowExplanations = (report.invalidLedgerRows || []).map(
+        (row) =>
+          `Ledger row ${row.rowNumber} was excluded because ${row.missingFields.join(", ")} is missing or invalid.`
+      );
+
       return {
-        summary: "AI insights are unavailable for this report.",
+        summary: invalidRowExplanations.length
+          ? `AI insights are unavailable for this report. ${invalidRowExplanations.length} ledger rows were excluded because required values were missing or invalid.`
+          : "AI insights are unavailable for this report.",
         risks: report.statistics.mismatched + report.statistics.missing > 0
           ? ["The report contains unresolved transaction discrepancies."]
           : [],
-        recommendations: ["Review the reconciliation discrepancies and connector health before taking action."],
+        recommendations: [
+          "Review the reconciliation discrepancies and connector health before taking action.",
+          ...invalidRowExplanations,
+        ],
         confidence: 0,
         generatedAt: new Date(),
       };

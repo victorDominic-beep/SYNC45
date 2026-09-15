@@ -2,6 +2,7 @@ import { Transaction } from "../../shared/types/Transaction";
 import {
   ReconciliationReport,
   ReportStatistics,
+  InvalidLedgerRow,
 } from "../../shared/types/ReconciliationReport";
 import { ClassifiedDiscrepancy } from "../classifier/DiscrepancyClassifier";
 import { DiscrepancyType } from "../../shared/types/Discrepancy";
@@ -11,7 +12,8 @@ export class ReportGenerator {
   static generate(
     organizationId: string,
     matchedTransactions: Transaction[],
-    discrepancies: ClassifiedDiscrepancy[]
+    discrepancies: ClassifiedDiscrepancy[],
+    invalidLedgerRows: InvalidLedgerRow[] = []
   ): ReconciliationReport {
     const statistics = this.buildStatistics(
       matchedTransactions,
@@ -24,6 +26,7 @@ export class ReportGenerator {
       generatedAt: new Date(),
       statistics,
       discrepancies,
+      invalidLedgerRows: invalidLedgerRows.length ? invalidLedgerRows : undefined,
     };
   }
 

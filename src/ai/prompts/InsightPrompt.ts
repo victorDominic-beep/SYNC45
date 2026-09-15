@@ -38,6 +38,21 @@ Description: ${d.description}
   )
   .join("\n")}
 
+Invalid Ledger Rows Excluded
+
+${report.invalidLedgerRows?.length
+  ? report.invalidLedgerRows
+      .map(
+        (row) =>
+          `Row ${row.rowNumber}: excluded because ${row.missingFields.join(", ")} is missing or invalid.`
+      )
+      .join("\n")
+  : "None"}
+
+Explain every excluded ledger row in the summary, risks, or recommendations.
+State that each exclusion was caused by missing or invalid required values.
+Do not invent replacement values and do not mention or infer user identifiers.
+
 Respond ONLY with valid JSON.
 
 The JSON must follow exactly this structure:

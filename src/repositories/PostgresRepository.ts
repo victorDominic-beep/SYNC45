@@ -67,8 +67,14 @@ export class PostgresRepository {
         generated_at TIMESTAMP NOT NULL,
         statistics JSONB NOT NULL,
         discrepancies JSONB NOT NULL,
+        invalid_ledger_rows JSONB,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+    `);
+
+    await this.pool.query(`
+      ALTER TABLE sync45.reconciliation_reports
+      ADD COLUMN IF NOT EXISTS invalid_ledger_rows JSONB;
     `);
 
     await this.pool.query(`
@@ -335,14 +341,15 @@ export class PostgresRepository {
   async createReport(report: ReconciliationReport): Promise<ReconciliationReport> {
     await this.pool.query(
       `INSERT INTO sync45.reconciliation_reports
-        (id, organization_id, generated_at, statistics, discrepancies)
-       VALUES ($1, $2, $3, $4::jsonb, $5::jsonb)`,
+        (id, organization_id, generated_at, statistics, discrepancies, invalid_ledger_rows)
+       VALUES ($1, $2, $3, $4::jsonb, $5::jsonb, $6::jsonb)`,
       [
         report.id,
         report.organizationId,
         report.generatedAt,
         JSON.stringify(report.statistics),
         JSON.stringify(report.discrepancies),
+        JSON.stringify(report.invalidLedgerRows || []),
       ]
     );
 
@@ -351,7 +358,7 @@ export class PostgresRepository {
 
   async findReportsByOrganization(organizationId: string): Promise<ReconciliationReport[]> {
     const result = await this.pool.query(
-      `SELECT id, organization_id, generated_at, statistics, discrepancies
+      `SELECT id, organization_id, generated_at, statistics, discrepancies, invalid_ledger_rows
        FROM sync45.reconciliation_reports
        WHERE organization_id = $1
        ORDER BY generated_at DESC`,
@@ -363,7 +370,7 @@ export class PostgresRepository {
 
   async findAllReports(): Promise<ReconciliationReport[]> {
     const result = await this.pool.query(
-      `SELECT id, organization_id, generated_at, statistics, discrepancies
+      `SELECT id, organization_id, generated_at, statistics, discrepancies, invalid_ledger_rows
        FROM sync45.reconciliation_reports
        ORDER BY generated_at DESC`
     );
@@ -373,7 +380,7 @@ export class PostgresRepository {
 
   async findReportById(id: string): Promise<ReconciliationReport | null> {
     const result = await this.pool.query(
-      `SELECT id, organization_id, generated_at, statistics, discrepancies
+      `SELECT id, organization_id, generated_at, statistics, discrepancies, invalid_ledger_rows
        FROM sync45.reconciliation_reports
        WHERE id = $1
        LIMIT 1`,
@@ -390,6 +397,7 @@ export class PostgresRepository {
       generatedAt: new Date(row.generated_at),
       statistics: row.statistics,
       discrepancies: row.discrepancies,
+      invalidLedgerRows: row.invalid_ledger_rows || undefined,
     };
   }
 }
