@@ -16,12 +16,9 @@ export class OrganizationController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const organization =
-        await this.organizationService.create(req.body);
-
-      res.status(201).json({
-        success: true,
-        data: organization,
+      res.status(403).json({
+        success: false,
+        message: "Organization creation is only available during registration.",
       });
     } catch (error) {
       next(error);
@@ -29,17 +26,17 @@ export class OrganizationController {
   };
 
   public findAll = async (
-    _req: Request,
+    req: Request,
     res: Response,
     next: NextFunction
   ): Promise<void> => {
     try {
-      const organizations =
-        await this.organizationService.findAll();
+      const organizationId = String(req.user?.organizationId || "");
+      const organization = await this.organizationService.findById(organizationId);
 
       res.status(200).json({
         success: true,
-        data: organizations,
+        data: organization ? [organization] : [],
       });
     } catch (error) {
       next(error);
@@ -107,14 +104,23 @@ export class OrganizationController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const organizationId =
-        req.params.id || req.body.organizationId || req.body.organization;
+      const tokenOrganizationId = String(req.user?.organizationId || "");
+      const requestedOrganizationId =
+        req.params.id || req.body.organizationId || req.body.organization || tokenOrganizationId;
+
+      if (requestedOrganizationId !== tokenOrganizationId) {
+        res.status(403).json({
+          success: false,
+          message: "You do not have access to this organization.",
+        });
+        return;
+      }
 
       const body = req.body.connections ?? req.body;
 
       const organization =
         await this.organizationService.saveConnections(
-          organizationId,
+          tokenOrganizationId,
           body
         );
 
@@ -126,9 +132,12 @@ export class OrganizationController {
         return;
       }
 
+      const connections = await this.organizationService.getConnections(tokenOrganizationId);
+
       res.status(200).json({
         success: true,
-        data: organization.connections,
+        message: "Connections saved successfully.",
+        data: connections || {},
       });
     } catch (error) {
       next(error);

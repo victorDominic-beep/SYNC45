@@ -53,6 +53,10 @@ export class OrganizationService {
     }
   }
 
+  private reencryptStored(value?: string): string | undefined {
+    return value ? this.encrypt(this.decrypt(value)) : undefined;
+  }
+
   async create(organization: Organization): Promise<Organization> {
     if (this.postgresRepository) {
       const row = await this.postgresRepository.createOrganization(
@@ -64,7 +68,7 @@ export class OrganizationService {
         id: row.id,
         name: row.name,
         email: row.email,
-        isActive: true,
+        isActive: row.is_active !== false,
         createdAt: new Date(row.created_at),
         updatedAt: new Date(row.updated_at),
         paymentProvider: organization.paymentProvider,
@@ -89,7 +93,7 @@ export class OrganizationService {
         id: row.id,
         name: row.name,
         email: row.email,
-        isActive: true,
+        isActive: row.is_active !== false,
         createdAt: new Date(row.created_at),
         updatedAt: new Date(row.updated_at),
         paymentProvider: "paystack",
@@ -117,7 +121,7 @@ export class OrganizationService {
         id: row.id,
         name: row.name,
         email: row.email,
-        isActive: true,
+        isActive: row.is_active !== false,
         createdAt: new Date(row.created_at),
         updatedAt: new Date(row.updated_at),
         paymentProvider: "paystack",
@@ -149,7 +153,7 @@ export class OrganizationService {
         id: row.id,
         name: row.name,
         email: row.email,
-        isActive: true,
+        isActive: row.is_active !== false,
         createdAt: new Date(row.created_at),
         updatedAt: new Date(row.updated_at),
         paymentProvider: "paystack",
@@ -185,46 +189,54 @@ export class OrganizationService {
     payload: OrganizationConnectionSettings
   ): Promise<Organization | null> {
     if (this.postgresRepository) {
-      const nextConnections: OrganizationConnectionSettings = {
-        ...payload,
-      };
+      const current = await this.postgresRepository.getConnections(organizationId);
+      const encryptedConnections: OrganizationConnectionSettings = {};
 
-      if (payload.paystack?.secretKey) {
-        nextConnections.paystack = {
-          ...nextConnections.paystack,
-          encryptedSecretKey: this.encrypt(payload.paystack.secretKey),
-          connected: true,
+      if (payload.paystack || current?.paystack_secret_key) {
+        encryptedConnections.paystack = {
+          encryptedSecretKey: payload.paystack?.secretKey
+            ? this.encrypt(payload.paystack.secretKey)
+            : this.reencryptStored(current?.paystack_secret_key),
         };
       }
 
-      if (payload.mongodb?.uri) {
-        nextConnections.mongodb = {
-          ...nextConnections.mongodb,
-          ...payload.mongodb,
-          encryptedUri: this.encrypt(payload.mongodb.uri),
-          connected: true,
+      if (payload.mongodb || current?.mongodb_uri) {
+        encryptedConnections.mongodb = {
+          encryptedUri: payload.mongodb?.uri
+            ? this.encrypt(payload.mongodb.uri)
+            : this.reencryptStored(current?.mongodb_uri),
+          database: payload.mongodb?.database ?? current?.mongodb_database,
+          collection: payload.mongodb?.collection ?? current?.mongodb_collection,
         };
       }
 
-      if (payload.postgresql?.password) {
-        nextConnections.postgresql = {
-          ...nextConnections.postgresql,
-          ...payload.postgresql,
-          encryptedPassword: this.encrypt(payload.postgresql.password),
-          connected: true,
+      if (payload.postgresql || current?.postgresql_password) {
+        encryptedConnections.postgresql = {
+          encryptedPassword: payload.postgresql?.password
+            ? this.encrypt(payload.postgresql.password)
+            : this.reencryptStored(current?.postgresql_password),
+          host: payload.postgresql?.host ?? current?.postgresql_host,
+          port: payload.postgresql?.port ?? current?.postgresql_port,
+          database: payload.postgresql?.database ?? current?.postgresql_database,
+          user: payload.postgresql?.user ?? current?.postgresql_user,
+          table: payload.postgresql?.table ?? current?.postgresql_table,
         };
       }
 
-      if (payload.mysql?.password) {
-        nextConnections.mysql = {
-          ...nextConnections.mysql,
-          ...payload.mysql,
-          encryptedPassword: this.encrypt(payload.mysql.password),
-          connected: true,
+      if (payload.mysql || current?.mysql_password) {
+        encryptedConnections.mysql = {
+          encryptedPassword: payload.mysql?.password
+            ? this.encrypt(payload.mysql.password)
+            : this.reencryptStored(current?.mysql_password),
+          host: payload.mysql?.host ?? current?.mysql_host,
+          port: payload.mysql?.port ?? current?.mysql_port,
+          database: payload.mysql?.database ?? current?.mysql_database,
+          user: payload.mysql?.user ?? current?.mysql_user,
+          table: payload.mysql?.table ?? current?.mysql_table,
         };
       }
 
-      await this.postgresRepository.saveConnections(organizationId, nextConnections);
+      await this.postgresRepository.saveConnections(organizationId, encryptedConnections);
       return this.findById(organizationId);
     }
 
@@ -291,22 +303,25 @@ export class OrganizationService {
       }
 
       return {
-        paystack: row.paystack_secret_key ? { connected: true } : undefined,
+        paystack: row.paystack_secret_key ? { connected: true, configured: true } : undefined,
         mongodb: row.mongodb_uri ? {
           connected: true,
+          configured: true,
           database: row.mongodb_database,
           collection: row.mongodb_collection,
         } : undefined,
-        postgresql: row.postgresql_host ? {
+        postgresql: row.postgresql_password ? {
           connected: true,
+          configured: true,
           host: row.postgresql_host,
           port: row.postgresql_port,
           database: row.postgresql_database,
           user: row.postgresql_user,
           table: row.postgresql_table,
         } : undefined,
-        mysql: row.mysql_host ? {
+        mysql: row.mysql_password ? {
           connected: true,
+          configured: true,
           host: row.mysql_host,
           port: row.mysql_port,
           database: row.mysql_database,
@@ -458,11 +473,7 @@ export class OrganizationService {
 
   async activate(id: string): Promise<boolean> {
     if (this.postgresRepository) {
-      const organization = await this.findById(id);
-      if (!organization) {
-        return false;
-      }
-      return true;
+      return Boolean(await this.postgresRepository.updateOrganizationActive(id, true));
     }
 
     const organization = await this.findById(id);
@@ -479,11 +490,7 @@ export class OrganizationService {
 
   async deactivate(id: string): Promise<boolean> {
     if (this.postgresRepository) {
-      const organization = await this.findById(id);
-      if (!organization) {
-        return false;
-      }
-      return true;
+      return Boolean(await this.postgresRepository.updateOrganizationActive(id, false));
     }
 
     const organization = await this.findById(id);

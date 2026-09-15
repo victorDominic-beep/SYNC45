@@ -17,6 +17,8 @@ import { ReconciliationRepository } from "../../repositories/ReconciliationRepos
 import { CSVConnector } from "../../connectors/ledger/excel/ExcelConnector";
 import { OrganizationService } from "../../organizations/OrganizationService";
 import { promises as fs } from "fs";
+import { AppError } from "../../errors/AppError";
+import { ErrorCode } from "../../errors/ErrorCode";
 
 type LedgerSource = "mongodb" | "postgresql" | "mysql" | "excel" | "csv";
 
@@ -31,9 +33,6 @@ export interface ReconciliationRequest {
 
 export class ReconciliationService {
   constructor(
-    private readonly paystackConnector: PaystackConnector,
-    private readonly ledgerConnector: Connector,
-    private readonly ledgerSource: LedgerSource,
     private readonly aiInsightService: AIInsightService,
     private readonly reconciliationRepository: ReconciliationRepository,
     private readonly csvUploadRegistry?: Map<string, string>,
@@ -48,43 +47,56 @@ export class ReconciliationService {
       ReturnType<AIInsightService["generateInsights"]>
     >;
   }> {
-    const requestedSource = request.ledgerSource ?? this.ledgerSource;
+    const requestedSource = request.ledgerSource;
     const filePath = request.csvFileId
       ? this.csvUploadRegistry?.get(request.csvFileId)
       : request.csvFilePath;
 
-    let activePaystackConnector = this.paystackConnector;
-    let activeConnector = this.ledgerConnector;
-    let activeSource = this.ledgerSource;
+    let activePaystackConnector: PaystackConnector;
+    let activeConnector: Connector;
+    let activeSource: LedgerSource;
     let startedCsvConnector = false;
 
     // If an organization has stored new credentials, prefer the requested connector type
     // for that organization. If the request sends no ledgerSource override, the existing
     // environment configuration remains the default fallback.
-    if (this.organizationService && request.organizationId) {
-      const savedConnections =
-        await this.organizationService.resolveConnectionConfig(
-          request.organizationId
-        );
+    if (!request.organizationId || !requestedSource || !this.organizationService) {
+      throw new AppError(
+        "Organization and ledger source are required for reconciliation.",
+        ErrorCode.INVALID_REQUEST,
+        422
+      );
+    }
 
-      const sourceToUse = requestedSource;
-      if (savedConnections?.paystack?.secretKey) {
-        activePaystackConnector = new PaystackConnector(
-          savedConnections.paystack.secretKey
-        );
-      }
+    const savedConnections =
+      await this.organizationService.resolveConnectionConfig(request.organizationId);
 
-      if (sourceToUse === "mongodb" && savedConnections?.mongodb?.uri) {
+    if (!savedConnections?.paystack?.secretKey) {
+      throw new AppError(
+        "Paystack connection is not configured for this organization.",
+        ErrorCode.PAYMENT_CONNECTOR_FAILED,
+        422
+      );
+    }
+
+    activePaystackConnector = new PaystackConnector(savedConnections.paystack.secretKey);
+    activeSource = requestedSource;
+
+    switch (requestedSource) {
+      case "mongodb":
+        if (!savedConnections.mongodb?.uri) {
+          throw new AppError("MongoDB connection is not configured for this organization.", ErrorCode.LEDGER_CONNECTOR_FAILED, 422);
+        }
         activeConnector = new MongoDBConnector({
           uri: savedConnections.mongodb.uri,
           database: savedConnections.mongodb.database || "sync45",
           collection: savedConnections.mongodb.collection || "transactions",
         });
-        activeSource = "mongodb";
-      } else if (
-        sourceToUse === "postgresql" &&
-        savedConnections?.postgresql?.password
-      ) {
+        break;
+      case "postgresql":
+        if (!savedConnections.postgresql?.password) {
+          throw new AppError("PostgreSQL ledger connection is not configured for this organization.", ErrorCode.LEDGER_CONNECTOR_FAILED, 422);
+        }
         activeConnector = new PostgreSQLConnector({
           host: savedConnections.postgresql.host || "localhost",
           port: savedConnections.postgresql.port || 5432,
@@ -93,11 +105,11 @@ export class ReconciliationService {
           password: savedConnections.postgresql.password,
           table: savedConnections.postgresql.table || "transactions",
         });
-        activeSource = "postgresql";
-      } else if (
-        sourceToUse === "mysql" &&
-        savedConnections?.mysql?.password
-      ) {
+        break;
+      case "mysql":
+        if (!savedConnections.mysql?.password) {
+          throw new AppError("MySQL connection is not configured for this organization.", ErrorCode.LEDGER_CONNECTOR_FAILED, 422);
+        }
         activeConnector = new MySQLConnector({
           host: savedConnections.mysql.host || "localhost",
           port: savedConnections.mysql.port || 3306,
@@ -106,28 +118,27 @@ export class ReconciliationService {
           password: savedConnections.mysql.password,
           table: savedConnections.mysql.table || "transactions",
         });
-        activeSource = "mysql";
-      } else if (
-        sourceToUse === "mongodb" &&
-        savedConnections?.mongodb?.uri
-      ) {
-        activeConnector = new MongoDBConnector({
-          uri: savedConnections.mongodb.uri,
-          database: savedConnections.mongodb.database || "sync45",
-          collection: savedConnections.mongodb.collection || "transactions",
-        });
-        activeSource = "mongodb";
-      }
-    }
-
-    if (requestedSource === "csv") {
-      if (!filePath) {
-        throw new Error("CSV ledger file reference is required when ledgerSource is csv.");
-      }
-
-      activeConnector = new CSVConnector({ filePath });
-      activeSource = "csv";
-      startedCsvConnector = true;
+        break;
+      case "excel":
+        throw new AppError(
+          "Global Excel files are not organization-isolated and cannot be used for organization reconciliation.",
+          ErrorCode.LEDGER_CONNECTOR_FAILED,
+          422
+        );
+      case "csv":
+        if (!filePath) {
+          throw new AppError(
+            "CSV ledger file reference is required when ledgerSource is csv.",
+            ErrorCode.INVALID_REQUEST,
+            422
+          );
+        }
+        activeConnector = new CSVConnector({ filePath: filePath || "" });
+        activeSource = "csv";
+        startedCsvConnector = true;
+        break;
+      default:
+        throw new AppError("Unsupported ledger source.", ErrorCode.INVALID_REQUEST, 422);
     }
 
     await activeConnector.connect();

@@ -1,17 +1,29 @@
 require('dotenv').config();
 const { Pool } = require('pg');
 
+const isTruthy = (value) => [
+  '1', 'true', 'yes', 'on', 'require', 'verify-ca', 'verify-full'
+].includes(String(value || '').trim().toLowerCase());
+
+const sslEnabled = isTruthy(
+  process.env.SYNC45_DB_SSL ||
+  process.env.POSTGRESQL_SSL ||
+  process.env.PGSSLMODE
+);
+
 (async () => {
   const pool = new Pool({
-  host: process.env.POSTGRESQL_HOST || process.env.POSTGRES_HOST || 'localhost',
-  port: Number(process.env.POSTGRESQL_PORT || process.env.POSTGRES_PORT || 5432),
-  database: process.env.POSTGRESQL_DATABASE || process.env.POSTGRES_DB || 'sync45_test',
-  user: process.env.POSTGRESQL_USER || process.env.POSTGRES_USER || 'postgres',
-  password: process.env.POSTGRESQL_PASSWORD || process.env.POSTGRES_PASSWORD || 'admin',
-  ssl: {
-    rejectUnauthorized: false,
-  },
-});
+    host: process.env.SYNC45_DB_HOST || process.env.POSTGRESQL_HOST || process.env.POSTGRES_HOST || 'localhost',
+    port: Number(process.env.SYNC45_DB_PORT || process.env.POSTGRESQL_PORT || process.env.POSTGRES_PORT || 5432),
+    database: process.env.SYNC45_DB_DATABASE || process.env.POSTGRESQL_DATABASE || process.env.POSTGRES_DB || 'sync45_test',
+    user: process.env.SYNC45_DB_USER || process.env.POSTGRESQL_USER || process.env.POSTGRES_USER || 'postgres',
+    password: process.env.SYNC45_DB_PASSWORD || process.env.POSTGRESQL_PASSWORD || process.env.POSTGRES_PASSWORD || 'admin',
+    ssl: sslEnabled
+      ? { rejectUnauthorized: isTruthy(process.env.SYNC45_DB_SSL_REJECT_UNAUTHORIZED || process.env.POSTGRESQL_SSL_REJECT_UNAUTHORIZED) }
+      : false,
+    connectionTimeoutMillis: 5000,
+    statement_timeout: 5000,
+  });
   try {
     await pool.query(`CREATE SCHEMA IF NOT EXISTS sync45;`);
     await pool.query(`
@@ -19,9 +31,15 @@ const { Pool } = require('pg');
         id VARCHAR(80) PRIMARY KEY,
         name VARCHAR(255) NOT NULL,
         email VARCHAR(255),
+        is_active BOOLEAN DEFAULT TRUE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+    `);
+
+    await pool.query(`
+      ALTER TABLE sync45.organizations
+      ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;
     `);
 
     await pool.query(`
@@ -38,6 +56,17 @@ const { Pool } = require('pg');
         is_active BOOLEAN DEFAULT TRUE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS sync45.reconciliation_reports (
+        id VARCHAR(80) PRIMARY KEY,
+        organization_id VARCHAR(80) NOT NULL REFERENCES sync45.organizations(id),
+        generated_at TIMESTAMP NOT NULL,
+        statistics JSONB NOT NULL,
+        discrepancies JSONB NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
 

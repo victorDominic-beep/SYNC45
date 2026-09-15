@@ -44,8 +44,7 @@ export class GlobalErrorHandler {
         success: false,
         code: error.code,
         correlationId,
-        message:
-          "Unable to complete your request at this time."
+        message: error.message,
       });
 
       return;

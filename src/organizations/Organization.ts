@@ -3,6 +3,7 @@ export interface OrganizationConnectionSettings {
     secretKey?: string;
     encryptedSecretKey?: string;
     connected?: boolean;
+    configured?: boolean;
   };
 
   mongodb?: {
@@ -11,6 +12,7 @@ export interface OrganizationConnectionSettings {
     collection?: string;
     encryptedUri?: string;
     connected?: boolean;
+    configured?: boolean;
   };
 
   postgresql?: {
@@ -22,6 +24,7 @@ export interface OrganizationConnectionSettings {
     encryptedPassword?: string;
     table?: string;
     connected?: boolean;
+    configured?: boolean;
   };
 
   mysql?: {
@@ -33,6 +36,7 @@ export interface OrganizationConnectionSettings {
     encryptedPassword?: string;
     table?: string;
     connected?: boolean;
+    configured?: boolean;
   };
 }
 

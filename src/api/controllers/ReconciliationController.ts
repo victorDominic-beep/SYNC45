@@ -113,9 +113,8 @@ export class ReconciliationController {
 
   async list(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const reports = req.query.organizationId
-        ? await this.reconciliationRepository.findByOrganization(String(req.query.organizationId))
-        : await this.reconciliationRepository.findAll();
+      const organizationId = String(req.user?.organizationId || "");
+      const reports = await this.reconciliationRepository.findByOrganization(organizationId);
       res.json({ success: true, data: reports });
     } catch (error) {
       next(error);
@@ -129,6 +128,15 @@ export class ReconciliationController {
         res.status(404).json({ success: false, message: "Reconciliation report not found." });
         return;
       }
+
+      if (report.organizationId !== String(req.user?.organizationId || "")) {
+        res.status(403).json({
+          success: false,
+          message: "You do not have access to this reconciliation report.",
+        });
+        return;
+      }
+
       res.json({ success: true, data: report });
     } catch (error) {
       next(error);

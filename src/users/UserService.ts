@@ -3,6 +3,8 @@ import bcrypt from "bcryptjs";
 import { User } from "./User";
 import { PostgresRepository } from "../repositories/PostgresRepository";
 import { Jwt } from "../shared/utils/Jwt";
+import { AppError } from "../errors/AppError";
+import { ErrorCode } from "../errors/ErrorCode";
 
 const otpStore = new Map<string, { otp: string; createdAt: number; expiresAt: number }>();
 
@@ -200,69 +202,11 @@ export class UserService {
   }
 
   async googleLogin(payload: any): Promise<any> {
-    const email = String(payload.email || "").trim().toLowerCase();
-    const firstName = String(payload.firstName || "Google");
-    const lastName = String(payload.lastName || "User");
-
-    if (!email) {
-      throw new Error("Google email is required.");
-    }
-
-    if (!this.postgresRepository) {
-      throw new Error("PostgreSQL repository is not configured.");
-    }
-
-    const existing = await this.postgresRepository.findUserByEmail(email);
-
-    if (existing) {
-      return {
-        user: {
-          id: existing.id,
-          email: existing.email,
-          firstName: existing.first_name,
-          lastName: existing.last_name,
-          organizationId: existing.organization_id,
-          role: existing.role,
-        },
-      };
-    }
-
-    const org = await this.postgresRepository.createOrganization(
-      "Google Organization",
-      email
+    throw new AppError(
+      "Google authentication is not configured.",
+      ErrorCode.INVALID_REQUEST,
+      501
     );
-    const id = randomUUID();
-    const newUser = await this.postgresRepository.createUser({
-      id,
-      organizationId: org.id,
-      firstName,
-      lastName,
-      email,
-      passwordHash: null,
-      provider: "google",
-      providerUserId: payload.providerUserId || randomUUID(),
-      role: "ADMIN",
-      isActive: true,
-    });
-
-    const token = Jwt.sign({
-      sub: newUser.id,
-      email: newUser.email,
-      organizationId: newUser.organization_id,
-      role: newUser.role,
-    });
-
-    return {
-      token,
-      user: {
-        id: newUser.id,
-        email: newUser.email,
-        firstName: newUser.first_name,
-        lastName: newUser.last_name,
-        organizationId: newUser.organization_id,
-        role: newUser.role,
-      },
-    };
   }
 
   async findById(id: string): Promise<User | null> {

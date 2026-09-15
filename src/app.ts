@@ -37,15 +37,15 @@ app.use(express.urlencoded({ extended: true }));
 
 app.get("/health", async (_req, res, next) => {
   try {
-    const [paystack, ledger] = await Promise.all([
-      application.paystackConnector.testConnection(),
-      application.ledgerConnector.healthCheck(),
-    ]);
-    const healthy = paystack && ledger;
-    res.status(healthy ? 200 : 503).json({
-      success: healthy,
-      status: healthy ? "ready" : "degraded",
-      connectors: { paystack, ledger },
+    const database = await application.postgresRepository.healthCheck();
+    res.status(database ? 200 : 503).json({
+      success: database,
+      status: database ? "ready" : "degraded",
+      application: { database },
+      externalConnectors: {
+        organizationScoped: true,
+        globalFallbacksEnabled: false,
+      },
     });
   } catch (error) {
     next(error);

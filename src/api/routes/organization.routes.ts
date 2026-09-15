@@ -13,7 +13,7 @@ export function createOrganizationRoutes(application: Application): Router {
 
   router.post(
     "/organizations",
-    requireAuth,
+    requireAuth(application.postgresRepository),
     (req: Request, res: Response, next: NextFunction) => {
       void organizationController.create(req, res, next);
     }
@@ -21,7 +21,7 @@ export function createOrganizationRoutes(application: Application): Router {
 
   router.get(
     "/organizations",
-    requireAuth,
+    requireAuth(application.postgresRepository),
     (req: Request, res: Response, next: NextFunction) => {
       void organizationController.findAll(req, res, next);
     }
@@ -29,7 +29,7 @@ export function createOrganizationRoutes(application: Application): Router {
 
   router.get(
     "/organizations/:id",
-    requireAuth,
+    requireAuth(application.postgresRepository),
     requireOrganizationScope,
     (req: Request, res: Response, next: NextFunction) => {
       void organizationController.findById(req as unknown as Request<OrganizationParams>, res, next);
@@ -38,7 +38,7 @@ export function createOrganizationRoutes(application: Application): Router {
 
   router.put(
     "/organizations/:id",
-    requireAuth,
+    requireAuth(application.postgresRepository),
     requireOrganizationScope,
     (req: Request, res: Response, next: NextFunction) => {
       void organizationController.update(req as unknown as Request<OrganizationParams>, res, next);
@@ -47,7 +47,9 @@ export function createOrganizationRoutes(application: Application): Router {
 
   router.patch(
     "/organizations/:id/activate",
-    requireAuth,
+    requireAuth(application.postgresRepository, {
+      allowInactiveOrganization: true,
+    }),
     requireOrganizationScope,
     (req: Request, res: Response, next: NextFunction) => {
       void organizationController.activate(req as unknown as Request<OrganizationParams>, res, next);
@@ -56,7 +58,7 @@ export function createOrganizationRoutes(application: Application): Router {
 
   router.patch(
     "/organizations/:id/deactivate",
-    requireAuth,
+    requireAuth(application.postgresRepository),
     requireOrganizationScope,
     (req: Request, res: Response, next: NextFunction) => {
       void organizationController.deactivate(req as unknown as Request<OrganizationParams>, res, next);
@@ -65,7 +67,7 @@ export function createOrganizationRoutes(application: Application): Router {
 
   router.delete(
     "/organizations/:id",
-    requireAuth,
+    requireAuth(application.postgresRepository),
     requireOrganizationScope,
     (req: Request, res: Response, next: NextFunction) => {
       void organizationController.delete(req as unknown as Request<OrganizationParams>, res, next);
@@ -74,7 +76,7 @@ export function createOrganizationRoutes(application: Application): Router {
 
   router.get(
     "/organizations/:id/connections",
-    requireAuth,
+    requireAuth(application.postgresRepository),
     requireOrganizationScope,
     (req: Request, res: Response, next: NextFunction) => {
       void organizationController.getConnections(req as unknown as Request<OrganizationParams>, res, next);
@@ -83,7 +85,7 @@ export function createOrganizationRoutes(application: Application): Router {
 
   router.post(
     "/connections",
-    requireAuth,
+    requireAuth(application.postgresRepository),
     requireOrganizationScope,
     (req: Request, res: Response, next: NextFunction) => {
       void organizationController.saveConnections(req, res, next);
@@ -92,7 +94,7 @@ export function createOrganizationRoutes(application: Application): Router {
 
   router.post(
     "/organizations/:id/connections",
-    requireAuth,
+    requireAuth(application.postgresRepository),
     requireOrganizationScope,
     (req: Request, res: Response, next: NextFunction) => {
       void organizationController.saveConnections(req, res, next);

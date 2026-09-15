@@ -33,7 +33,7 @@ export function createReconciliationRoutes(application: Application): Router {
 
     router.get(
     "/reports",
-    requireAuth,
+    requireAuth(application.postgresRepository),
     (req, res, next) => {
       void reconciliationController.list(req, res, next);
     }
@@ -41,8 +41,7 @@ export function createReconciliationRoutes(application: Application): Router {
 
   router.get(
     "/reports/:id",
-    requireAuth,
-    requireOrganizationScope,
+    requireAuth(application.postgresRepository),
     (req, res, next) => {
       void reconciliationController.getById(req, res, next);
     }
@@ -50,7 +49,7 @@ export function createReconciliationRoutes(application: Application): Router {
 
   router.post(
     "/upload-csv",
-    requireAuth,
+    requireAuth(application.postgresRepository),
     upload.single("file"),
     (req, res, next) => {
       void reconciliationController.uploadCsv(req, res, next);
@@ -59,7 +58,7 @@ export function createReconciliationRoutes(application: Application): Router {
 
   router.post(
     "/reconcile",
-    requireAuth,
+    requireAuth(application.postgresRepository),
     requireOrganizationScope,
     ReconciliationValidator.validate,
     (req, res, next) => {

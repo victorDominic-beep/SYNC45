@@ -6,7 +6,7 @@ export class ReconciliationValidator {
     res: Response,
     next: NextFunction
   ): void {
-    const { organizationId, from, to } = req.body;
+    const { organizationId, from, to, ledgerSource } = req.body;
 
     if (!organizationId) {
       res.status(400).json({
@@ -28,6 +28,22 @@ export class ReconciliationValidator {
       res.status(400).json({
         success: false,
         message: "to date is required.",
+      });
+      return;
+    }
+
+    if (!ledgerSource) {
+      res.status(400).json({
+        success: false,
+        message: "ledgerSource is required.",
+      });
+      return;
+    }
+
+    if (!["mongodb", "postgresql", "mysql", "excel", "csv"].includes(ledgerSource)) {
+      res.status(400).json({
+        success: false,
+        message: "ledgerSource must be mongodb, postgresql, mysql, excel, or csv.",
       });
       return;
     }

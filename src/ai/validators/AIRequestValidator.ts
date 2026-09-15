@@ -6,12 +6,12 @@ export class AIRequestValidator {
     res: Response,
     next: NextFunction
   ): void {
-    const { report } = req.body;
+    const { reportId } = req.body;
 
-    if (!report) {
+    if (!reportId) {
       res.status(400).json({
         success: false,
-        message: "Reconciliation report is required.",
+        message: "reportId is required.",
       });
       return;
     }

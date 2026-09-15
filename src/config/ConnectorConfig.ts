@@ -29,23 +29,23 @@ export class ConnectorConfig {
 
   // PostgreSQL
   static readonly POSTGRESQL_HOST =
-    process.env.POSTGRESQL_HOST || "localhost";
+    process.env.LEDGER_POSTGRES_HOST || "localhost";
 
   static readonly POSTGRESQL_PORT = Number(
-    process.env.POSTGRESQL_PORT || 5432
+    process.env.LEDGER_POSTGRES_PORT || 5432
   );
 
   static readonly POSTGRESQL_DATABASE =
-    process.env.POSTGRESQL_DATABASE || "sync45";
+    process.env.LEDGER_POSTGRES_DATABASE || "sync45";
 
   static readonly POSTGRESQL_USER =
-    process.env.POSTGRESQL_USER || "postgres";
+    process.env.LEDGER_POSTGRES_USER || "postgres";
 
   static readonly POSTGRESQL_PASSWORD =
-    process.env.POSTGRESQL_PASSWORD || "";
+    process.env.LEDGER_POSTGRES_PASSWORD || "";
 
   static readonly POSTGRESQL_TABLE =
-    process.env.POSTGRESQL_TABLE || "transactions";
+    process.env.LEDGER_POSTGRES_TABLE || "transactions";
 
   // MySQL
   static readonly MYSQL_HOST =

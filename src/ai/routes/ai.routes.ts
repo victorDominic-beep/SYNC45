@@ -10,7 +10,7 @@ export function createAIRoutes(application: Application): Router {
 
   router.post(
     "/insights",
-    requireAuth,
+    requireAuth(application.postgresRepository),
     AIRequestValidator.validate,
     aiController.generateInsights.bind(aiController)
   );

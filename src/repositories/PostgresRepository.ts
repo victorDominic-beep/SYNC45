@@ -1,5 +1,6 @@
 import { Pool } from "pg";
 import { PostgreSQLRuntimeConfig } from "../config/PostgreSQLConfig";
+import { ReconciliationReport } from "../shared/types/ReconciliationReport";
 
 export class PostgresRepository {
   private readonly pool: Pool;
@@ -16,6 +17,8 @@ export class PostgresRepository {
             rejectUnauthorized: PostgreSQLRuntimeConfig.SSL_REJECT_UNAUTHORIZED,
           }
         : false,
+      connectionTimeoutMillis: 5000,
+      statement_timeout: 5000,
     });
   }
 
@@ -29,9 +32,15 @@ export class PostgresRepository {
         id VARCHAR(80) PRIMARY KEY,
         name VARCHAR(255) NOT NULL,
         email VARCHAR(255),
+        is_active BOOLEAN DEFAULT TRUE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+    `);
+
+    await this.pool.query(`
+      ALTER TABLE sync45.organizations
+      ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;
     `);
 
     await this.pool.query(`
@@ -48,6 +57,17 @@ export class PostgresRepository {
         is_active BOOLEAN DEFAULT TRUE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    await this.pool.query(`
+      CREATE TABLE IF NOT EXISTS sync45.reconciliation_reports (
+        id VARCHAR(80) PRIMARY KEY,
+        organization_id VARCHAR(80) NOT NULL REFERENCES sync45.organizations(id),
+        generated_at TIMESTAMP NOT NULL,
+        statistics JSONB NOT NULL,
+        discrepancies JSONB NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
 
@@ -117,6 +137,27 @@ export class PostgresRepository {
     );
 
     return result.rows[0] ?? null;
+  }
+
+  async updateOrganizationActive(id: string, isActive: boolean): Promise<any | null> {
+    const result = await this.pool.query(
+      `UPDATE sync45.organizations
+       SET is_active = $2, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $1
+       RETURNING *`,
+      [id, isActive]
+    );
+
+    return result.rows[0] ?? null;
+  }
+
+  async healthCheck(): Promise<boolean> {
+    try {
+      await this.pool.query("SELECT 1");
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   async findAllOrganizations(): Promise<any[]> {
@@ -196,31 +237,32 @@ export class PostgresRepository {
 
   async saveConnections(organizationId: string, payload: Record<string, any>): Promise<any | null> {
     const existing = await this.pool.query(
-      `SELECT id FROM sync45.organization_connections WHERE organization_id = $1 LIMIT 1`,
+      `SELECT * FROM sync45.organization_connections WHERE organization_id = $1 LIMIT 1`,
       [organizationId]
     );
 
     const id = existing.rows[0]?.id || `conn-${Date.now()}-${Math.round(Math.random() * 100000)}`;
+    const current = existing.rows[0] || {};
 
     const values = [
       id,
       organizationId,
-      payload.paystack?.secretKey || payload.paystack?.encryptedSecretKey || null,
-      payload.mongodb?.uri || payload.mongodb?.encryptedUri || null,
-      payload.mongodb?.database || null,
-      payload.mongodb?.collection || null,
-      payload.postgresql?.host || null,
-      payload.postgresql?.port || null,
-      payload.postgresql?.database || null,
-      payload.postgresql?.user || null,
-      payload.postgresql?.password || payload.postgresql?.encryptedPassword || null,
-      payload.postgresql?.table || null,
-      payload.mysql?.host || null,
-      payload.mysql?.port || null,
-      payload.mysql?.database || null,
-      payload.mysql?.user || null,
-      payload.mysql?.password || payload.mysql?.encryptedPassword || null,
-      payload.mysql?.table || null,
+      payload.paystack?.encryptedSecretKey ?? current.paystack_secret_key ?? null,
+      payload.mongodb?.encryptedUri ?? current.mongodb_uri ?? null,
+      payload.mongodb?.database ?? current.mongodb_database ?? null,
+      payload.mongodb?.collection ?? current.mongodb_collection ?? null,
+      payload.postgresql?.host ?? current.postgresql_host ?? null,
+      payload.postgresql?.port ?? current.postgresql_port ?? null,
+      payload.postgresql?.database ?? current.postgresql_database ?? null,
+      payload.postgresql?.user ?? current.postgresql_user ?? null,
+      payload.postgresql?.encryptedPassword ?? current.postgresql_password ?? null,
+      payload.postgresql?.table ?? current.postgresql_table ?? null,
+      payload.mysql?.host ?? current.mysql_host ?? null,
+      payload.mysql?.port ?? current.mysql_port ?? null,
+      payload.mysql?.database ?? current.mysql_database ?? null,
+      payload.mysql?.user ?? current.mysql_user ?? null,
+      payload.mysql?.encryptedPassword ?? current.mysql_password ?? null,
+      payload.mysql?.table ?? current.mysql_table ?? null,
     ];
 
     if (existing.rows[0]) {
@@ -288,6 +330,67 @@ export class PostgresRepository {
     );
 
     return result.rows[0] ?? null;
+  }
+
+  async createReport(report: ReconciliationReport): Promise<ReconciliationReport> {
+    await this.pool.query(
+      `INSERT INTO sync45.reconciliation_reports
+        (id, organization_id, generated_at, statistics, discrepancies)
+       VALUES ($1, $2, $3, $4::jsonb, $5::jsonb)`,
+      [
+        report.id,
+        report.organizationId,
+        report.generatedAt,
+        JSON.stringify(report.statistics),
+        JSON.stringify(report.discrepancies),
+      ]
+    );
+
+    return report;
+  }
+
+  async findReportsByOrganization(organizationId: string): Promise<ReconciliationReport[]> {
+    const result = await this.pool.query(
+      `SELECT id, organization_id, generated_at, statistics, discrepancies
+       FROM sync45.reconciliation_reports
+       WHERE organization_id = $1
+       ORDER BY generated_at DESC`,
+      [organizationId]
+    );
+
+    return result.rows.map((row) => this.mapReport(row));
+  }
+
+  async findAllReports(): Promise<ReconciliationReport[]> {
+    const result = await this.pool.query(
+      `SELECT id, organization_id, generated_at, statistics, discrepancies
+       FROM sync45.reconciliation_reports
+       ORDER BY generated_at DESC`
+    );
+
+    return result.rows.map((row) => this.mapReport(row));
+  }
+
+  async findReportById(id: string): Promise<ReconciliationReport | null> {
+    const result = await this.pool.query(
+      `SELECT id, organization_id, generated_at, statistics, discrepancies
+       FROM sync45.reconciliation_reports
+       WHERE id = $1
+       LIMIT 1`,
+      [id]
+    );
+
+    return result.rows[0] ? this.mapReport(result.rows[0]) : null;
+  }
+
+  private mapReport(row: any): ReconciliationReport {
+    return {
+      id: row.id,
+      organizationId: row.organization_id,
+      generatedAt: new Date(row.generated_at),
+      statistics: row.statistics,
+      discrepancies: row.discrepancies,
+    };
   }
 }
 

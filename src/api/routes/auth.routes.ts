@@ -10,7 +10,11 @@ export function createAuthRoutes(application: Application): Router {
   router.post("/login", userController.login.bind(userController));
   router.post("/forgot-password", userController.forgotPassword.bind(userController));
   router.post("/reset-password", userController.resetPassword.bind(userController));
-  router.get("/me", requireAuth, userController.getMe.bind(userController));
+  router.get(
+    "/me",
+    requireAuth(application.postgresRepository),
+    userController.getMe.bind(userController)
+  );
   router.post("/google", userController.googleLogin.bind(userController));
 
   return router;

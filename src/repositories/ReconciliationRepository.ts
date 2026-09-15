@@ -3,8 +3,13 @@ import { BaseRepository } from "./BaseRepository";
 import { promises as fs } from "fs";
 import path from "path";
 import { ConnectorConfig } from "../config/ConnectorConfig";
+import { PostgresRepository } from "./PostgresRepository";
 
 export class ReconciliationRepository extends BaseRepository<ReconciliationReport> {
+  constructor(private readonly postgresRepository?: PostgresRepository) {
+    super();
+  }
+
   private readonly filePath = path.resolve(ConnectorConfig.RECONCILIATION_STORE_PATH);
   private reconciliations: ReconciliationReport[] | null = null;
 
@@ -33,6 +38,10 @@ export class ReconciliationRepository extends BaseRepository<ReconciliationRepor
   async create(
     report: ReconciliationReport
   ): Promise<ReconciliationReport> {
+    if (this.postgresRepository) {
+      return this.postgresRepository.createReport(report);
+    }
+
     const reports = await this.load();
     reports.push(report);
     await this.persist();
@@ -43,6 +52,10 @@ export class ReconciliationRepository extends BaseRepository<ReconciliationRepor
   async findById(
     id: string
   ): Promise<ReconciliationReport | null> {
+    if (this.postgresRepository) {
+      return this.postgresRepository.findReportById(id);
+    }
+
     const reports = await this.load();
     const report = reports.find(
       (reconciliation) => reconciliation.id === id
@@ -52,6 +65,11 @@ export class ReconciliationRepository extends BaseRepository<ReconciliationRepor
   }
 
   async findAll(): Promise<ReconciliationReport[]> {
+    if (this.postgresRepository) {
+      const reports = await this.postgresRepository.findAllReports();
+      return reports;
+    }
+
     return [...(await this.load())];
   }
 
@@ -96,6 +114,10 @@ export class ReconciliationRepository extends BaseRepository<ReconciliationRepor
   async findByOrganization(
     organizationId: string
   ): Promise<ReconciliationReport[]> {
+    if (this.postgresRepository) {
+      return this.postgresRepository.findReportsByOrganization(organizationId);
+    }
+
     const reports = await this.load();
     return reports.filter(
       (report) => report.organizationId === organizationId
