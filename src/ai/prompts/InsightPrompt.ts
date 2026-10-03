@@ -30,6 +30,7 @@ ${report.discrepancies
   .map(
     (d) => `
 Reference: ${d.reference}
+Direction: ${d.paymentTransaction?.direction ?? d.ledgerTransaction?.direction ?? "unknown"}
 Type: ${d.type}
 Severity: ${d.severity}
 Priority: ${d.priority}
@@ -49,9 +50,16 @@ ${report.invalidLedgerRows?.length
       .join("\n")
   : "None"}
 
-Explain every excluded ledger row in the summary, risks, or recommendations.
-State that each exclusion was caused by missing or invalid required values.
+Analyze the excluded ledger rows as a data-quality issue.
+
+Summarize the overall number of excluded rows and identify recurring missing or invalid fields when possible.
+
+Do not list every excluded row individually. Use row numbers only as examples when useful.
+
+State that exclusions were caused by missing or invalid required values.
+
 Do not invent replacement values and do not mention or infer user identifiers.
+Do not expose raw transaction data.
 
 Respond ONLY with valid JSON.
 

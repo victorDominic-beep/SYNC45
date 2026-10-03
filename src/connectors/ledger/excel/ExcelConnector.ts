@@ -12,8 +12,8 @@ export interface CSVConfig {
 export class CSVConnector implements Connector {
   private static readonly canonicalColumnAliases: Record<string, string[]> = {
     reference: [
-      "reference",
       "transactionReference",
+      "reference",
       "transactionRef",
       "transaction_ref",
       "transactionId",
@@ -57,11 +57,17 @@ export class CSVConnector implements Connector {
       "payerEmail",
       "payer_email",
     ],
+    transactionType: [
+      "transactionType",
+      "transaction_type",
+      "direction",
+      "type",
+    ],
     paidAt: [
       "transactionDate",
+      "createdAt",
       "paidAt",
       "paid_at",
-      "createdAt",
       "created_at",
       "transaction_date",
       "processedAt",
@@ -150,9 +156,41 @@ export class CSVConnector implements Connector {
     return String(row[key] ?? "");
   }
 
+  private static getMappedDateValue(row: Record<string, any>): string | undefined {
+    for (const alias of CSVConnector.canonicalColumnAliases.paidAt) {
+      const key = Object.keys(row).find(
+        (field) => field.toLowerCase() === alias.toLowerCase()
+      );
+      if (!key) continue;
+
+      const value = String(row[key] ?? "").trim();
+      if (value && !Number.isNaN(new Date(value).getTime())) {
+        return value;
+      }
+    }
+
+    return undefined;
+  }
+
+  private static normalizeTransactionType(value: string): "IN" | "OUT" | undefined {
+    const normalized = value.trim().toLowerCase().replace(/[\s_-]+/g, " ");
+    if (["in", "credit", "incoming", "inflow", "money in", "deposit"].includes(normalized)) {
+      return "IN";
+    }
+    if (["out", "debit", "outgoing", "outflow", "money out", "withdrawal"].includes(normalized)) {
+      return "OUT";
+    }
+    return undefined;
+  }
+
   private static toCanonicalTransaction(row: Record<string, any>): Record<string, any> {
+    const transactionReference = CSVConnector.getExactValue(row, "transactionReference");
+    const reference = CSVConnector.getExactValue(row, "reference");
     return {
-      reference: CSVConnector.getMappedValue(row, "reference")?.trim(),
+      reference: (transactionReference || reference || "").trim(),
+      alternateReference: transactionReference && reference && transactionReference.trim() !== reference.trim()
+        ? reference.trim()
+        : undefined,
       amount: Number(CSVConnector.getMappedValue(row, "amount") ?? 0),
       currency: String(CSVConnector.getMappedValue(row, "currency") ?? "NGN")
         .trim()
@@ -162,9 +200,16 @@ export class CSVConnector implements Connector {
         .toLowerCase(),
       customer: String(CSVConnector.getMappedValue(row, "customer") ?? "")
         .trim(),
-      paidAt: String(CSVConnector.getMappedValue(row, "paidAt") ?? "")
-        .trim(),
+      paidAt: CSVConnector.getMappedDateValue(row) ?? "",
+      transactionType: CSVConnector.normalizeTransactionType(
+        String(CSVConnector.getMappedValue(row, "transactionType") ?? "")
+      ) ?? "",
     };
+  }
+
+  private static getExactValue(row: Record<string, any>, field: string): string | undefined {
+    const key = Object.keys(row).find((candidate) => candidate.toLowerCase() === field.toLowerCase());
+    return key ? String(row[key] ?? "") : undefined;
   }
 
   private static getInvalidFields(row: Record<string, any>): string[] {
@@ -172,12 +217,15 @@ export class CSVConnector implements Connector {
     const reference = CSVConnector.getMappedValue(row, "reference")?.trim();
     const amount = CSVConnector.getMappedValue(row, "amount")?.trim();
     const status = CSVConnector.getMappedValue(row, "status")?.trim();
-    const paidAt = CSVConnector.getMappedValue(row, "paidAt")?.trim();
+    const paidAt = CSVConnector.getMappedDateValue(row);
+    const transactionType = CSVConnector.getMappedValue(row, "transactionType")?.trim();
 
     if (!reference) missingFields.push("transactionReference/reference");
     if (!amount || Number.isNaN(Number(amount))) missingFields.push("amount");
     if (!status) missingFields.push("status");
     if (!paidAt) missingFields.push("transactionDate/paidAt");
+    if (!transactionType) missingFields.push("transactionType");
+    else if (!CSVConnector.normalizeTransactionType(transactionType)) missingFields.push("transactionType (invalid)");
 
     return missingFields;
   }

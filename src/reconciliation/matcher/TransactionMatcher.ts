@@ -1,12 +1,5 @@
-import {
-  Transaction,
-} from "../../shared/types/Transaction";
-
-import {
-  Discrepancy,
-  DiscrepancyStatus,
-  DiscrepancyType,
-} from "../../shared/types/Discrepancy";
+import { Transaction } from "../../shared/types/Transaction";
+import { Discrepancy, DiscrepancyStatus, DiscrepancyType } from "../../shared/types/Discrepancy";
 
 export interface MatchResult {
   matched: Transaction[];
@@ -14,115 +7,73 @@ export interface MatchResult {
 }
 
 export class TransactionMatcher {
-  static match(
-    paymentTransactions: Transaction[],
-    ledgerTransactions: Transaction[]
-  ): MatchResult {
+  static match(paymentTransactions: Transaction[], ledgerTransactions: Transaction[]): MatchResult {
     const matched: Transaction[] = [];
     const discrepancies: Discrepancy[] = [];
-
-    // Group ledger transactions by reference
-    const ledgerMap = new Map<string, Transaction[]>();
+    const ledgerMap = new Map<string, Set<Transaction>>();
+    const unmatchedLedger = new Set(ledgerTransactions);
 
     for (const ledger of ledgerTransactions) {
-      const existing = ledgerMap.get(ledger.reference) ?? [];
-      existing.push(ledger);
-      ledgerMap.set(ledger.reference, existing);
+      for (const reference of this.references(ledger)) {
+        const entries = ledgerMap.get(reference) ?? new Set<Transaction>();
+        entries.add(ledger);
+        ledgerMap.set(reference, entries);
+      }
     }
 
-    // Compare every payment transaction
     for (const payment of paymentTransactions) {
-      const ledgerEntries = ledgerMap.get(payment.reference);
+      const ledgerEntries = new Set<Transaction>();
+      for (const reference of this.references(payment)) {
+        for (const ledger of ledgerMap.get(reference) ?? []) {
+          if (unmatchedLedger.has(ledger)) ledgerEntries.add(ledger);
+        }
+      }
 
-      // Missing from ledger
-      if (!ledgerEntries || ledgerEntries.length === 0) {
-        discrepancies.push({
-          id: crypto.randomUUID(),
-          reference: payment.reference,
-          type: DiscrepancyType.MISSING_LEDGER_ENTRY,
-          status: DiscrepancyStatus.OPEN,
-          paymentTransaction: payment,
-          description:
-            "Transaction exists in payment provider but not in ledger.",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        });
-
+      if (!ledgerEntries.size) {
+        discrepancies.push(this.discrepancy(payment.reference, DiscrepancyType.MISSING_LEDGER_ENTRY, payment, undefined, "Transaction exists in payment provider but not in ledger."));
+        continue;
+      }
+      if (ledgerEntries.size > 1) {
+        discrepancies.push(this.discrepancy(payment.reference, DiscrepancyType.DUPLICATE, payment, ledgerEntries.values().next().value, "Multiple ledger entries exist for the same transaction reference."));
+        for (const ledger of ledgerEntries) unmatchedLedger.delete(ledger);
         continue;
       }
 
-      // Duplicate ledger entries
-      if (ledgerEntries.length > 1) {
-        discrepancies.push({
-          id: crypto.randomUUID(),
-          reference: payment.reference,
-          type: DiscrepancyType.DUPLICATE,
-          status: DiscrepancyStatus.OPEN,
-          paymentTransaction: payment,
-          ledgerTransaction: ledgerEntries[0],
-          description:
-            "Multiple ledger entries exist for the same transaction reference.",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        });
-
-        ledgerMap.delete(payment.reference);
-
+      const ledger = ledgerEntries.values().next().value!;
+      if (payment.canonicalAmount !== ledger.canonicalAmount || payment.currency !== ledger.currency || payment.status !== ledger.status || !this.directionsMatch(payment, ledger)) {
+        discrepancies.push(this.discrepancy(payment.reference, DiscrepancyType.MISMATCH, payment, ledger, this.mismatchDescription(payment, ledger)));
+        unmatchedLedger.delete(ledger);
         continue;
       }
-
-      const ledger = ledgerEntries[0];
-
-      // Compare fields
-      if (
-        payment.amount !== ledger.amount ||
-        payment.currency !== ledger.currency ||
-        payment.status !== ledger.status
-      ) {
-        discrepancies.push({
-          id: crypto.randomUUID(),
-          reference: payment.reference,
-          type: DiscrepancyType.MISMATCH,
-          status: DiscrepancyStatus.OPEN,
-          paymentTransaction: payment,
-          ledgerTransaction: ledger,
-          description:
-            "Transaction fields do not match.",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        });
-
-        ledgerMap.delete(payment.reference);
-
-        continue;
-      }
-
-      // Exact match
       matched.push(payment);
-
-      ledgerMap.delete(payment.reference);
+      unmatchedLedger.delete(ledger);
     }
 
-    // Remaining ledger transactions are unmatched
-    for (const ledgerEntries of ledgerMap.values()) {
-      for (const ledger of ledgerEntries) {
-        discrepancies.push({
-          id: crypto.randomUUID(),
-          reference: ledger.reference,
-          type: DiscrepancyType.UNMATCHED_LEDGER_ENTRY,
-          status: DiscrepancyStatus.OPEN,
-          ledgerTransaction: ledger,
-          description:
-            "Transaction exists in ledger but not in payment provider.",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        });
-      }
+    for (const ledger of unmatchedLedger) {
+      discrepancies.push(this.discrepancy(ledger.reference, DiscrepancyType.UNMATCHED_LEDGER_ENTRY, undefined, ledger, "Transaction exists in ledger but not in payment provider."));
     }
+    return { matched, discrepancies };
+  }
 
-    return {
-      matched,
-      discrepancies,
-    };
+  private static references(transaction: Transaction): string[] {
+    return [...new Set([transaction.reference, transaction.alternateReference]
+      .map((reference) => String(reference ?? "").trim().toUpperCase())
+      .filter(Boolean))];
+  }
+
+  /** Unknown direction is compatible for legacy sources; two known values must agree. */
+  private static directionsMatch(payment: Transaction, ledger: Transaction): boolean {
+    return !payment.direction || !ledger.direction || payment.direction === ledger.direction;
+  }
+
+  private static mismatchDescription(payment: Transaction, ledger: Transaction): string {
+    if (payment.direction && ledger.direction && payment.direction !== ledger.direction) {
+      return `Transaction direction mismatch: payment is ${payment.direction}, ledger is ${ledger.direction}.`;
+    }
+    return "Transaction fields do not match.";
+  }
+
+  private static discrepancy(reference: string, type: DiscrepancyType, paymentTransaction?: Transaction, ledgerTransaction?: Transaction, description = ""): Discrepancy {
+    return { id: crypto.randomUUID(), reference, type, status: DiscrepancyStatus.OPEN, paymentTransaction, ledgerTransaction, description, createdAt: new Date(), updatedAt: new Date() };
   }
 }

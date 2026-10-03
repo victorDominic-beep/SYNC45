@@ -1,0 +1,2 @@
+reference,amount,currency,status,customer,paidAt
+UPLOAD-TEST-001,1000,NGN,success,test@example.com,2026-09-15

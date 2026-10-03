@@ -206,6 +206,8 @@ export class ReconciliationService {
               );
           }
         }
+      ).filter((transaction) =>
+        ReconciliationService.isWithinRequestedRange(transaction.paidAt, request.from, request.to)
       );
 
       const { matched, discrepancies } =
@@ -246,5 +248,15 @@ export class ReconciliationService {
         this.csvUploadRegistry?.delete(uploadedFile.fileId);
       }
     }
+  }
+
+  /** Applies the request range after source-specific normalization. Date-only `to` values include their entire UTC day. */
+  private static isWithinRequestedRange(paidAt: Date, from: string, to: string): boolean {
+    if (!(paidAt instanceof Date) || Number.isNaN(paidAt.getTime())) return false;
+    const start = new Date(from);
+    const end = new Date(to);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return false;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(to)) end.setUTCHours(23, 59, 59, 999);
+    return paidAt >= start && paidAt <= end;
   }
 }
