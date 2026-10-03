@@ -38,12 +38,24 @@ export class GroqProvider implements AIProvider {
     const json = response.match(/```(?:json)?\s*([\s\S]*?)\s*```/)?.[1] ?? response;
     const insight = JSON.parse(json);
 
+    if (!insight || typeof insight !== "object" || Array.isArray(insight)) {
+      throw new Error("AI response must be a JSON object.");
+    }
+
+    const confidence = Number(insight.confidence);
+
     return {
-      summary: typeof insight.summary === "string" ? insight.summary : "AI analysis completed.",
-      risks: Array.isArray(insight.risks) ? insight.risks.map(String) : [],
-      recommendations: Array.isArray(insight.recommendations) ? insight.recommendations.map(String) : [],
-      confidence: typeof insight.confidence === "number"
-        ? Math.max(0, Math.min(1, insight.confidence))
+      summary: typeof insight.summary === "string" && insight.summary.trim()
+        ? insight.summary.trim()
+        : "AI analysis completed.",
+      risks: Array.isArray(insight.risks)
+        ? insight.risks.filter((item: unknown): item is string => typeof item === "string" && item.trim() !== "").map((item: string) => item.trim())
+        : [],
+      recommendations: Array.isArray(insight.recommendations)
+        ? insight.recommendations.filter((item: unknown): item is string => typeof item === "string" && item.trim() !== "").map((item: string) => item.trim())
+        : [],
+      confidence: Number.isFinite(confidence)
+        ? Math.max(0, Math.min(1, confidence > 1 ? confidence / 100 : confidence))
         : 0,
       generatedAt: new Date(),
     };

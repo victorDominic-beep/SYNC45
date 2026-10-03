@@ -2,20 +2,37 @@ import { ReconciliationReport } from "../../shared/types/ReconciliationReport";
 
 export class InsightPrompt {
   static build(report: ReconciliationReport): string {
+    const discrepancyCounts = report.discrepancies.reduce<Record<string, number>>(
+      (counts, discrepancy) => {
+        counts[discrepancy.type] = (counts[discrepancy.type] ?? 0) + 1;
+        return counts;
+      },
+      {}
+    );
+    const severityCounts = report.discrepancies.reduce<Record<string, number>>(
+      (counts, discrepancy) => {
+        counts[discrepancy.severity] = (counts[discrepancy.severity] ?? 0) + 1;
+        return counts;
+      },
+      {}
+    );
+    const invalidFieldCounts = (report.invalidLedgerRows ?? []).reduce<Record<string, number>>(
+      (counts, row) => {
+        for (const field of row.missingFields) {
+          counts[field] = (counts[field] ?? 0) + 1;
+        }
+        return counts;
+      },
+      {}
+    );
+
     return `
 You are an expert financial reconciliation analyst.
 
-Analyze the reconciliation report below and provide professional insights.
+Provide concise, cautious insights based only on the aggregate counts below.
+The counts are authoritative; do not recalculate or invent values.
 
-Reconciliation Report
-
-Organization ID:
-${report.organizationId}
-
-Generated At:
-${report.generatedAt.toISOString()}
-
-Statistics
+Reconciliation statistics
 
 - Total Transactions: ${report.statistics.totalTransactions}
 - Matched: ${report.statistics.matched}
@@ -24,42 +41,17 @@ Statistics
 - Mismatched: ${report.statistics.mismatched}
 - Duplicates: ${report.statistics.duplicates}
 
-Discrepancies
+Discrepancy counts by type:
+${JSON.stringify(discrepancyCounts)}
 
-${report.discrepancies
-  .map(
-    (d) => `
-Reference: ${d.reference}
-Direction: ${d.paymentTransaction?.direction ?? d.ledgerTransaction?.direction ?? "unknown"}
-Type: ${d.type}
-Severity: ${d.severity}
-Priority: ${d.priority}
-Description: ${d.description}
-`
-  )
-  .join("\n")}
+Discrepancy counts by severity:
+${JSON.stringify(severityCounts)}
 
-Invalid Ledger Rows Excluded
+Invalid ledger row count: ${report.invalidLedgerRows?.length ?? 0}
+Invalid field counts:
+${JSON.stringify(invalidFieldCounts)}
 
-${report.invalidLedgerRows?.length
-  ? report.invalidLedgerRows
-      .map(
-        (row) =>
-          `Row ${row.rowNumber}: excluded because ${row.missingFields.join(", ")} is missing or invalid.`
-      )
-      .join("\n")
-  : "None"}
-
-Analyze the excluded ledger rows as a data-quality issue.
-
-Summarize the overall number of excluded rows and identify recurring missing or invalid fields when possible.
-
-Do not list every excluded row individually. Use row numbers only as examples when useful.
-
-State that exclusions were caused by missing or invalid required values.
-
-Do not invent replacement values and do not mention or infer user identifiers.
-Do not expose raw transaction data.
+Do not infer individual transaction causes from aggregate counts. Do not claim that an item was investigated or resolved. Recommend checking the relevant source data and mappings where appropriate. Do not include identifiers, references, customer information, row numbers, or raw transaction data.
 
 Respond ONLY with valid JSON.
 
@@ -73,7 +65,7 @@ The JSON must follow exactly this structure:
   "recommendations": [
     "string"
   ],
-  "confidence": 95
+  "confidence": 0.95
 }
   Do not include markdown.
 Do not wrap the JSON in triple backticks.
